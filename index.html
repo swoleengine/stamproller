@@ -1,0 +1,990 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>*{box-sizing:border-box}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<title>Stamproller Roll Designer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@500;800&family=Archivo+Black&family=Anton&family=Bebas+Neue&family=Bungee&family=Oswald:wght@700&family=Roboto+Condensed:wght@700&family=Montserrat:wght@900&family=Permanent+Marker&family=Pacifico&family=Lobster&family=Black+Ops+One&family=Russo+One&family=Fredoka:wght@700&family=Rubik+Mono+One&family=Righteous&family=Titan+One&family=Luckiest+Guy&family=Staatliches&family=Caveat+Brush&display=swap">
+<style>
+/* Layout: werkbank – Band-Editor als Hauptflaeche, Werkzeugleiste links, Eigenschaften rechts, darunter Abdruck auf Packpapier + 3D-Ring */
+:root{
+  --navy:#1d2650; --navy-2:#2a356b; --ink:#16182a; --signal:#f29a1f; --signal-ink:#3a2200;
+  --bg:#eef0f5; --panel:#ffffff; --line:#d6dae6; --fg:#1a1d2b; --muted:#5d6480;
+  --band:#f7f4ec; --kraft:#c9a46c; --kraft-2:#b8925a; --stamp:#1b1b22;
+  --red:#d6362e; --yellow:#e2a400; --purple:#8a3ad6; --ok:#2e8b57;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12141f; --panel:#1b1e2e; --line:#2e3350; --fg:#e8eaf3; --muted:#9aa1bf; --band:#ece7da; --navy-2:#3b4890; color-scheme:dark } }
+:root[data-theme="dark"]{ --bg:#12141f; --panel:#1b1e2e; --line:#2e3350; --fg:#e8eaf3; --muted:#9aa1bf; --band:#ece7da; --navy-2:#3b4890; color-scheme:dark }
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg); color:var(--fg); font-family:var(--f-body); font-size:14px; margin:0}
+button,input,select{font:inherit; color:inherit}
+.top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:var(--navy); color:#fff;
+  padding-block:10px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{display:flex; align-items:baseline; gap:8px; margin-right:auto}
+.brand b{font-family:var(--f-display); font-weight:800; font-size:22px; letter-spacing:.02em}
+.brand b i{font-style:normal; color:var(--signal)}
+.brand span{font-size:12px; opacity:.75; letter-spacing:.04em}
+.seg{display:inline-flex; background:rgba(255,255,255,.1); border-radius:8px; padding:3px; gap:2px}
+.seg button{border:0; background:transparent; color:#fff; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:600; white-space:nowrap}
+.seg button[aria-pressed="true"]{background:#fff; color:var(--navy)}
+.seg.light{background:var(--bg); border:1px solid var(--line)}
+.seg.light button{color:var(--fg)}
+.seg.light button[aria-pressed="true"]{background:var(--navy); color:#fff}
+.btn{border:1px solid var(--line); background:var(--panel); padding:7px 12px; border-radius:8px; cursor:pointer; font-weight:600}
+.btn:hover{border-color:var(--navy-2)}
+.btn.primary{background:var(--signal); border-color:var(--signal); color:var(--signal-ink)}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.small{padding:4px 8px; font-size:12px}
+.btn:focus-visible,.seg button:focus-visible,.tool:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--signal); outline-offset:2px}
+.wrap{display:grid; grid-template-columns:76px minmax(0,1fr) 320px; gap:14px;
+  padding-block:14px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px))}
+.rail{display:flex; flex-direction:column; gap:6px}
+.tool{display:flex; flex-direction:column; align-items:center; gap:3px; border:1px solid var(--line); background:var(--panel);
+  border-radius:10px; padding:8px 4px; cursor:pointer; font-size:11px; font-weight:600; color:var(--muted)}
+.tool svg{width:22px; height:22px; stroke:var(--fg); fill:none; stroke-width:1.8}
+.tool[aria-pressed="true"]{border-color:var(--navy); background:var(--navy); color:#fff}
+.tool[aria-pressed="true"] svg{stroke:#fff}
+.center{display:flex; flex-direction:column; gap:14px; min-width:0}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:12px}
+.stagehead{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 12px; border-bottom:1px solid var(--line)}
+.stagehead h2,.side h3{font-family:var(--f-display); font-weight:700; font-size:15px; letter-spacing:.06em; text-transform:uppercase; margin:0}
+.stagehead .spacer{margin-left:auto}
+.meta{font-family:var(--f-mono); font-size:12px; color:var(--muted)}
+.stagebox{overflow-x:auto; padding:12px}
+#stage{display:block; touch-action:none; cursor:default}
+#stage.draw{cursor:crosshair}
+.legend{display:flex; gap:12px; flex-wrap:wrap; padding:0 12px 12px; font-size:12px; color:var(--muted)}
+.legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px}
+.lower{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:14px}
+.paperbox{padding:12px; overflow:hidden}
+#paper{display:block; width:100%; border-radius:8px}
+#ring3d{display:block; width:100%; height:220px; border-radius:8px; background:radial-gradient(circle at 50% 40%, #3a4270, #161a2e)}
+.side{display:flex; flex-direction:column; gap:14px; min-width:0}
+.side .card{padding:12px; display:flex; flex-direction:column; gap:10px}
+.row{display:flex; align-items:center; gap:8px}
+.row label{flex:0 0 96px; font-size:12px; color:var(--muted); font-weight:600}
+.row input[type=text],.row select,.row input[type=number]{flex:1; min-width:0; border:1px solid var(--line); background:var(--bg); border-radius:7px; padding:6px 8px}
+.row input[type=range]{flex:1; min-width:0; accent-color:var(--navy-2)}
+.row output{font-family:var(--f-mono); font-size:12px; width:52px; text-align:right; color:var(--muted)}
+.row input[type=checkbox]{accent-color:var(--navy-2); width:16px; height:16px}
+.hint{font-size:12px; color:var(--muted); line-height:1.45; margin:0}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chip{border:1px solid var(--line); background:var(--bg); border-radius:8px; width:40px; height:40px; display:grid; place-items:center; cursor:pointer}
+.chip canvas{width:26px; height:26px}
+.chip:hover{border-color:var(--navy-2)}
+.warns{display:flex; flex-direction:column; gap:6px}
+.warn{display:flex; gap:8px; align-items:flex-start; font-size:12.5px; line-height:1.4; padding:7px 9px; border-radius:8px; background:var(--bg)}
+.warn i{flex:0 0 8px; height:8px; margin-top:5px; border-radius:50%}
+.dl{display:flex; flex-direction:column; gap:8px}
+.dl .btn{width:100%}
+.busy{font-size:12px; color:var(--muted); min-height:16px}
+.presets{display:flex; gap:6px; flex-wrap:wrap}
+.layers{display:flex; flex-direction:column; gap:4px; max-height:170px; overflow:auto}
+.layer{display:flex; align-items:center; gap:6px; padding:5px 8px; border-radius:7px; border:1px solid transparent; cursor:pointer; font-size:12.5px}
+.layer[aria-current="true"]{border-color:var(--navy-2); background:var(--bg)}
+.layer span{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.foot{font-size:12px; color:var(--muted); padding-block:0 18px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px))}
+.foot a{color:inherit}
+input[type=file]{display:none}
+@media (max-width:1100px){ .wrap{grid-template-columns:64px minmax(0,1fr)} .side{grid-column:1 / -1; display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr))} }
+@media (max-width:720px){ .wrap{grid-template-columns:minmax(0,1fr)} .rail{flex-direction:row; overflow-x:auto} .tool{flex:0 0 64px}
+  .lower{grid-template-columns:minmax(0,1fr)} .brand span{display:none} }
+@media (prefers-reduced-motion: reduce){ *{transition:none!important; animation:none!important} }
+</style>
+
+<header class="top">
+  <div class="brand"><b>STAMP<i>ROLLER</i></b><span data-i="tagline">Roll Designer · by swoleengineer</span></div>
+  <div class="seg" id="sizeSeg" role="group" aria-label="Size">
+    <button data-size="100">10 cm</button><button data-size="200">20 cm</button><button data-size="300">30 cm</button>
+  </div>
+  <div class="seg" id="styleSeg" role="group" aria-label="Style">
+    <button data-style="negative" data-i="negative">Negative</button><button data-style="standard" data-i="standard">Standard</button>
+  </div>
+  <div class="seg" id="langSeg" role="group" aria-label="Language"><button data-lang="en">EN</button><button data-lang="de">DE</button></div>
+</header>
+
+<div class="wrap">
+  <nav class="rail" aria-label="Tools">
+    <button class="tool" id="tSelect" data-tool="select" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 2-3 6z"/></svg><span data-i="tSelect">Select</span></button>
+    <button class="tool" id="tText" data-add="text"><svg viewBox="0 0 24 24"><path d="M5 5h14M12 5v14M9 19h6"/></svg><span data-i="tText">Text</span></button>
+    <button class="tool" id="tShape" data-add="shape"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.3 6L12 16.4 6.6 19.4l1.3-6L3.4 9.3l6-.7z"/></svg><span data-i="tShape">Symbol</span></button>
+    <button class="tool" id="tDraw" data-tool="draw" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 20c4-1 6-4 9-8l4-4 3 3-4 4c-4 3-7 5-8 9z"/></svg><span data-i="tDraw">Draw</span></button>
+    <button class="tool" id="tErase" data-tool="erase" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M7 18h12M5 14l7-7 5 5-5 5H9z"/></svg><span data-i="tErase">Erase</span></button>
+    <button class="tool" id="tImage"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/></svg><span data-i="tImage">Logo</span></button>
+    <input type="file" id="fileImg" accept="image/png,image/jpeg,image/svg+xml">
+  </nav>
+
+  <main class="center">
+    <section class="card">
+      <div class="stagehead">
+        <h2 data-i="band">Ring surface</h2>
+        <span class="meta" id="metaSize"></span>
+        <span class="spacer"></span>
+        <label class="meta" for="zoom" data-i="zoom">Zoom</label>
+        <input type="range" id="zoom" min="1" max="4" step="0.25" value="1" style="width:110px">
+        <button class="btn small" id="undo" data-i="undo">Undo</button>
+      </div>
+      <div class="stagebox" id="stagebox"><canvas id="stage" width="1000" height="160"></canvas></div>
+      <div class="legend">
+        <span><i style="background:var(--red)"></i><span data-i="lgRed">too thin – will not print cleanly</span></span>
+        <span><i style="background:var(--yellow)"></i><span data-i="lgYellow">gap – felt tip drops in</span></span>
+        <span><i style="background:var(--purple)"></i><span data-i="lgPurple">outside the band – cut off</span></span>
+        <label class="meta"><input type="checkbox" id="showWarn" checked> <span data-i="showMarks">show marks</span></label>
+      </div>
+    </section>
+    <div class="lower">
+      <section class="card">
+        <div class="stagehead"><h2 data-i="onPaper">On paper</h2><span class="meta" data-i="paperHint">what your roller prints</span></div>
+        <div class="paperbox"><canvas id="paper" width="1200" height="150"></canvas></div>
+      </section>
+      <section class="card">
+        <div class="stagehead"><h2 data-i="ring">Ring</h2><span class="meta" data-i="dragRotate">drag to rotate</span></div>
+        <div class="paperbox"><canvas id="ring3d"></canvas></div>
+      </section>
+    </div>
+  </main>
+
+  <aside class="side">
+    <section class="card" id="propCard">
+      <h3 id="propTitle" data-i="props">Selected</h3>
+      <div id="props"></div>
+    </section>
+    <section class="card">
+      <h3 data-i="layersT">Elements</h3>
+      <div class="layers" id="layers"></div>
+      <div class="presets">
+        <button class="btn small" data-preset="name" data-i="prName">Name + flowers</button>
+        <button class="btn small" data-preset="url" data-i="prUrl">URL</button>
+        <button class="btn small" data-preset="fragile">FRAGILE</button>
+        <button class="btn small" data-preset="clear" data-i="prClear">Clear</button>
+      </div>
+    </section>
+    <section class="card">
+      <h3 data-i="checkT">Check</h3>
+      <div class="warns" id="warns"></div>
+    </section>
+    <section class="card">
+      <h3 data-i="settingsT">Ring settings</h3>
+      <div class="row"><label for="customC" data-i="customC">Circumference</label><input type="number" id="customC" min="60" max="400" step="1"><output>mm</output></div>
+      <div class="row"><label for="relief" data-i="relief">Relief depth</label><input type="range" id="relief" min="0.8" max="2.5" step="0.1"><output id="reliefV"></output></div>
+      <div class="row"><label for="rim" data-i="rim">Band edge</label><input type="range" id="rim" min="0.8" max="3" step="0.1"><output id="rimV"></output></div>
+      <div class="row"><label for="bridges" data-i="bridges">Bridges</label><select id="bridges"></select></div>
+      <div class="row"><label for="bridgeLow" data-i="bridgeLow">Non-printing</label><input type="checkbox" id="bridgeLow"></div>
+      <div class="row"><label for="slopes" data-i="slopes">45° slopes</label><input type="checkbox" id="slopes"></div>
+      <p class="hint" data-i="settingsHint">Slopes let the ring print upright without overhangs. Ring and hub fit the Stamproller 608 hub.</p>
+    </section>
+    <section class="card dl">
+      <h3 data-i="dlT">Download</h3>
+      <div class="row"><label for="part" data-i="part">Part</label><select id="part"></select></div>
+      <div class="row"><label for="withHub" data-i="withHub">+ PETG hub</label><input type="checkbox" id="withHub"></div>
+      <button class="btn primary" id="btnStl" data-i="dlBtn">Download STL</button>
+      <div class="row"><button class="btn small" id="btnSave" data-i="saveDesign">Save design</button><button class="btn small" id="btnLoad" data-i="loadDesign">Open design</button><input type="file" id="fileDesign" accept=".json,application/json"></div>
+      <div class="busy" id="busy"></div>
+      <p class="hint" data-i="printHint">Print the ring upright in TPU (foaming TPU looks best), 3 walls, 100 % concentric, 40 mm/s, retraction off.</p>
+    </section>
+  </aside>
+</div>
+<p class="foot"><span data-i="footer">Made for the Stamproller marker roller stamp.</span> <a href="https://makerworld.com/de/@swoleengineer" target="_blank" rel="noopener">MakerWorld @swoleengineer</a> · <a href="https://www.youtube.com/@joeldoing" target="_blank" rel="noopener">YouTube @joeldoing</a></p>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+// =====================================================================
+//  Stamproller Roll Designer – Kern: Zustand, Zeichnen, Masken, Warnungen
+// =====================================================================
+const $ = id => document.getElementById(id);
+const W = 15;                 // Ringbreite (mm)
+const PPM = 10;               // Maskenaufloesung: Pixel pro mm (0,1 mm)
+const FONTS = ["Archivo Black","Anton","Bebas Neue","Bungee","Oswald:700","Roboto Condensed:700","Montserrat:900","Russo One",
+  "Black Ops One","Rubik Mono One","Staatliches","Righteous","Titan One","Luckiest Guy","Fredoka:700","Permanent Marker",
+  "Caveat Brush","Pacifico","Lobster","JetBrains Mono:800"];
+const SHAPES = ["flower","heart","star","dot","diamond","sparkle","plus","square","play","arrow","check","note","hexagon","ring","triangle","rect","bar","scissors"];
+
+// ---------------- Sprache ----------------
+const I18N = {
+ en:{tagline:"Roll Designer · by swoleengineer",negative:"Negative",standard:"Standard",tSelect:"Select",tText:"Text",tShape:"Symbol",tDraw:"Draw",tErase:"Erase",tImage:"Logo",
+  band:"Ring surface",zoom:"Zoom",undo:"Undo",lgRed:"too thin – will not print cleanly",lgYellow:"gap – felt tip drops in",lgPurple:"outside the band – cut off",showMarks:"show marks",
+  onPaper:"On paper",paperHint:"what your roller prints",ring:"Ring",dragRotate:"drag to rotate",props:"Selected",layersT:"Elements",prName:"Name + flowers",prUrl:"URL",prClear:"Clear",
+  checkT:"Check",settingsT:"Ring settings",customC:"Circumference",relief:"Relief depth",rim:"Band edge",bridges:"Bridges",bridgeLow:"Non-printing",slopes:"45° slopes",
+  settingsHint:"Slopes let the ring print upright without overhangs. Ring and hub fit the Stamproller 608 hub.",dlT:"Download",part:"Part",withHub:"+ PETG hub",dlBtn:"Download STL",
+  saveDesign:"Save design",loadDesign:"Open design",printHint:"Print the ring upright in TPU (foaming TPU looks best), 3 walls, 100 % concentric, 40 mm/s, retraction off.",
+  footer:"Made for the Stamproller marker roller stamp.",
+  noSel:"Click an element on the ring to edit it – or add text, a symbol or your logo with the tools on the left.",
+  pText:"Text",pFont:"Font",pSize:"Height",pWidth:"Width",pSpacing:"Spacing",pBold:"Bold",pItalic:"Italic",pRepeat:"Repeats",pSep:"Separator",pSepSize:"Sep. size",pRot:"Rotate",
+  pShape:"Symbol",pOutline:"Outline",pThr:"Threshold",pInvert:"Invert",pBrush:"Brush",fitBand:"Fit to band",center:"Center",dup:"Duplicate",del:"Delete",front:"To front",
+  brOff:"Off",brLines:"Lines top + bottom",brUnder:"Underline",brDiag:"Diagonal hatching",partRing:"TPU text ring (for hub)",partOne:"One-piece roll (608 seat)",partHub:"PETG hub only",
+  wOk:"Everything looks good – ready to print.",wThin:"{n} thin spots marked red. Make the element bigger or bolder.",wGap:"{n} gap(s) marked yellow: the felt tip drops in there. Close the gap or turn on bridges.",
+  wOut:"Parts of the design lie outside the printable band (purple) and will be cut off.",wEmpty:"The ring is empty – add text or a symbol.",
+  wHead:"Heads exist for 10, 20 and 30 cm. A custom size needs a matching head.",busyBuild:"Building ring … {p} %",busyDone:"Done: {f}",busyFail:"Download cancelled.",
+  sepNone:"none",textLayer:"Text",shapeLayer:"Symbol",imageLayer:"Logo",strokeLayer:"Drawing",eraseLayer:"Eraser",reliefNote:"Relief limited to {r} mm so the hub grooves stay closed."},
+ de:{tagline:"Rollen-Designer · by swoleengineer",negative:"Negativ",standard:"Standard",tSelect:"Auswahl",tText:"Text",tShape:"Symbol",tDraw:"Zeichnen",tErase:"Radieren",tImage:"Logo",
+  band:"Ring-Oberfläche",zoom:"Zoom",undo:"Rückgängig",lgRed:"zu dünn – druckt nicht sauber",lgYellow:"Lücke – Filzspitze fällt hinein",lgPurple:"außerhalb des Bands – wird abgeschnitten",showMarks:"Markierungen",
+  onPaper:"Auf Papier",paperHint:"so druckt dein Roller",ring:"Ring",dragRotate:"ziehen zum Drehen",props:"Ausgewählt",layersT:"Elemente",prName:"Name + Blumen",prUrl:"URL",prClear:"Leeren",
+  checkT:"Prüfung",settingsT:"Ring-Einstellungen",customC:"Umfang",relief:"Relief-Tiefe",rim:"Bandrand",bridges:"Brücken",bridgeLow:"Nicht druckend",slopes:"45°-Schrägen",
+  settingsHint:"Schrägen lassen den Ring stehend ohne Überhänge drucken. Ring und Nabe passen zur Stamproller-608-Nabe.",dlT:"Download",part:"Teil",withHub:"+ PETG-Nabe",dlBtn:"STL herunterladen",
+  saveDesign:"Design speichern",loadDesign:"Design öffnen",printHint:"Ring stehend in TPU drucken (geschäumtes TPU sieht am besten aus), 3 Wände, 100 % konzentrisch, 40 mm/s, Retraction aus.",
+  footer:"Gemacht für den Stamproller Marker-Rollstempel.",
+  noSel:"Klick ein Element auf dem Ring an, um es zu bearbeiten – oder füge mit den Werkzeugen links Text, ein Symbol oder dein Logo hinzu.",
+  pText:"Text",pFont:"Schrift",pSize:"Höhe",pWidth:"Breite",pSpacing:"Abstand",pBold:"Fett",pItalic:"Kursiv",pRepeat:"Wiederholung",pSep:"Trenner",pSepSize:"Trenner-Größe",pRot:"Drehen",
+  pShape:"Symbol",pOutline:"Kontur",pThr:"Schwelle",pInvert:"Umkehren",pBrush:"Pinsel",fitBand:"Bandhöhe",center:"Mittig",dup:"Kopieren",del:"Löschen",front:"Nach vorn",
+  brOff:"Aus",brLines:"Linien oben + unten",brUnder:"Unterstrich",brDiag:"Diagonale Striche",partRing:"TPU-Textring (für Nabe)",partOne:"Rolle einteilig (608-Sitz)",partHub:"Nur PETG-Nabe",
+  wOk:"Alles sieht gut aus – bereit zum Drucken.",wThin:"{n} dünne Stellen rot markiert. Element größer oder fetter machen.",wGap:"{n} Lücke(n) gelb markiert: Dort fällt die Filzspitze hinein. Lücke schließen oder Brücken einschalten.",
+  wOut:"Teile des Designs liegen außerhalb des druckbaren Bands (lila) und werden abgeschnitten.",wEmpty:"Der Ring ist leer – füge Text oder ein Symbol hinzu.",
+  wHead:"Köpfe gibt es für 10, 20 und 30 cm. Eine eigene Größe braucht einen passenden Kopf.",busyBuild:"Ring wird erstellt … {p} %",busyDone:"Fertig: {f}",busyFail:"Download abgebrochen.",
+  sepNone:"keiner",textLayer:"Text",shapeLayer:"Symbol",imageLayer:"Logo",strokeLayer:"Zeichnung",eraseLayer:"Radierer",reliefNote:"Relief auf {r} mm begrenzt, damit die Nuten der Nabe geschlossen bleiben."}
+};
+const SHAPE_NAMES = {en:{flower:"Flower",heart:"Heart",star:"Star",dot:"Dot",diamond:"Diamond",sparkle:"Sparkle",plus:"Plus",square:"Square",play:"Play",arrow:"Arrow",check:"Check",note:"Note",hexagon:"Hexagon",ring:"Ring",triangle:"Triangle",rect:"Rectangle",bar:"Bar",scissors:"Scissors"},
+  de:{flower:"Blume",heart:"Herz",star:"Stern",dot:"Punkt",diamond:"Raute",sparkle:"Funkeln",plus:"Plus",square:"Quadrat",play:"Play",arrow:"Pfeil",check:"Haken",note:"Note",hexagon:"Sechseck",ring:"Ring",triangle:"Dreieck",rect:"Rechteck",bar:"Balken",scissors:"Schere"}};
+let LANG = "en";
+const t = (k, v) => { let s = (I18N[LANG] && I18N[LANG][k]) || I18N.en[k] || k; if (v) for (const n in v) s = s.replace("{"+n+"}", v[n]); return s; };
+
+// ---------------- Zustand ----------------
+let uid = 1;
+const S = { size:100, custom:120, style:"negative", rim:1.5, margin:0.8, relief:1.5, slopes:true, bridges:"off", bridgeLow:false,
+  part:"ring", withHub:false, objects:[] };
+let sel = null, tool = "select", brush = 1.2;
+const C = () => S.size > 0 ? S.size : S.custom;
+const history = [];
+function snapshot(){ history.push(JSON.stringify(S)); if (history.length > 60) history.shift(); }
+function undo(){ if (!history.length) return; const s = JSON.parse(history.pop()); Object.assign(S, s); S.objects.forEach(o=>{ if (o.type==="image") prepImage(o); }); sel = null; changed(true); syncUI(); }
+
+function newText(txt, x){ return {id:uid++, type:"text", text:txt, font:"Archivo Black", size:9, sx:100, spacing:0, bold:0, italic:false, x:x, y:0, rot:0, repeat:1, sep:"none", sepSize:0}; }
+function newShape(shape, x){ return {id:uid++, type:"shape", shape:shape, w:8, h:8, outline:false, x:x, y:0, rot:0, repeat:1}; }
+
+// ---------------- Formen (Einheitsgroesse 1 = Breite/Hoehe) ----------------
+function shapePath(ctx, name, w, h){
+  ctx.beginPath();
+  const star = (n, ro, ri) => { for (let i=0;i<2*n;i++){ const a=-Math.PI/2+i*Math.PI/n, r=i%2?ri:ro; const x=Math.cos(a)*r*w/2/ro*ro, y=Math.sin(a)*r*h/2/ro*ro; i?ctx.lineTo(x*1,y):ctx.moveTo(x,y); } ctx.closePath(); };
+  switch(name){
+    case "flower": { const d=Math.min(w,h); for (let i=0;i<5;i++){ const a=-Math.PI/2+i*2*Math.PI/5; ctx.moveTo(Math.cos(a)*0.29*d+0.17*d, Math.sin(a)*0.29*d); ctx.arc(Math.cos(a)*0.29*d, Math.sin(a)*0.29*d, 0.17*d, 0, 2*Math.PI); }
+      ctx.moveTo(0.18*d,0); ctx.arc(0,0,0.18*d,0,2*Math.PI); break; }
+    case "heart": { ctx.moveTo(0, h*0.46); ctx.bezierCurveTo(-w*0.62, h*0.02, -w*0.5, -h*0.5, 0, -h*0.2); ctx.bezierCurveTo(w*0.5, -h*0.5, w*0.62, h*0.02, 0, h*0.46); ctx.closePath(); break; }
+    case "star": star(5, 1, 0.45); break;
+    case "sparkle": star(4, 1, 0.28); break;
+    case "dot": ctx.ellipse(0,0,w*0.275,h*0.275,0,0,2*Math.PI); break;
+    case "diamond": ctx.moveTo(0,-h/2); ctx.lineTo(w*0.36,0); ctx.lineTo(0,h/2); ctx.lineTo(-w*0.36,0); ctx.closePath(); break;
+    case "plus": { const a=0.15; ctx.rect(-w/2,-h*a,w,2*h*a); ctx.rect(-w*a,-h/2,2*w*a,h); break; }
+    case "square": ctx.rect(-w*0.3,-h*0.3,w*0.6,h*0.6); break;
+    case "rect": ctx.rect(-w/2,-h/2,w,h); break;
+    case "bar": { const r=Math.min(w,h)/2; ctx.roundRect ? ctx.roundRect(-w/2,-h/2,w,h,r) : ctx.rect(-w/2,-h/2,w,h); break; }
+    case "triangle": ctx.moveTo(0,-h/2); ctx.lineTo(w/2,h/2); ctx.lineTo(-w/2,h/2); ctx.closePath(); break;
+    case "hexagon": for (let i=0;i<6;i++){ const a=i*Math.PI/3; const x=Math.cos(a)*w/2, y=Math.sin(a)*h/2; i?ctx.lineTo(x,y):ctx.moveTo(x,y);} ctx.closePath(); break;
+    case "ring": ctx.ellipse(0,0,w/2,h/2,0,0,2*Math.PI); ctx.moveTo(w*0.3,0); ctx.ellipse(0,0,w*0.3,h*0.3,0,0,2*Math.PI,true); break;
+    case "play": ctx.ellipse(0,0,w*0.475,h*0.475,0,0,2*Math.PI); ctx.moveTo(-w*0.15,-h*0.25); ctx.lineTo(-w*0.15,h*0.25); ctx.lineTo(w*0.28,0); ctx.closePath(); break;
+    case "arrow": ctx.moveTo(0,-h/2); ctx.lineTo(w/2,-h*0.05); ctx.lineTo(w*0.16,-h*0.05); ctx.lineTo(w*0.16,h/2); ctx.lineTo(-w*0.16,h/2); ctx.lineTo(-w*0.16,-h*0.05); ctx.lineTo(-w/2,-h*0.05); ctx.closePath(); break;
+    case "check": ctx.moveTo(-w/2,0); ctx.lineTo(-w*0.18,h*0.42); ctx.lineTo(w/2,-h*0.42); ctx.lineTo(w*0.38,-h*0.5); ctx.lineTo(-w*0.18,h*0.2); ctx.lineTo(-w*0.38,-h*0.12); ctx.closePath(); break;
+    case "note": { const hd=Math.min(w*0.42,h*0.38); for (const k of [-1,1]){ ctx.moveTo(k*0.27*w+hd/2, h/2-hd*0.36); ctx.ellipse(k*0.27*w, h/2-hd*0.36, hd/2, hd*0.36, -0.35, 0, 2*Math.PI); ctx.rect(k*0.27*w+hd*0.38, -h*0.45, w*0.08, h*0.9-hd*0.36); }
+      ctx.rect(-0.27*w+hd*0.38, -h*0.45, 0.54*w+w*0.08, h*0.14); break; }
+    case "scissors": { const rr=0.2*w, t=Math.max(0.6,0.07*w); for (const k of [-1,1]){ ctx.moveTo(-w/2+2*rr, k*0.22*h); ctx.arc(-w/2+rr, k*0.22*h, rr, 0, 2*Math.PI); ctx.moveTo(-w/2+rr+rr-t, k*0.22*h); ctx.arc(-w/2+rr, k*0.22*h, rr-t, 0, 2*Math.PI, true);
+        ctx.moveTo(-w/2+2*rr-t/2, k*0.1*h); ctx.lineTo(w/2, -k*0.2*h); ctx.lineTo(w/2-t, -k*0.2*h+k*t*0.4); ctx.lineTo(-w/2+2*rr-t/2, k*0.1*h+k*t); ctx.closePath(); } break; }
+    default: ctx.rect(-w/2,-h/2,w,h);
+  }
+}
+function fillShape(ctx, name, w, h, outline){
+  shapePath(ctx, name, w, h);
+  if (outline){ ctx.lineWidth = Math.max(0.8, Math.min(w,h)*0.12); ctx.lineJoin = "round"; ctx.stroke(); }
+  else ctx.fill("evenodd");
+}
+
+// ---------------- Schrift-Masse ----------------
+const fontCache = {};
+function fontSpec(f){ const [fam, w] = f.split(":"); return {fam, weight: w || "400"}; }
+function capRatio(f){   // Versalhoehe / Schriftgroesse
+  if (fontCache[f]) return fontCache[f];
+  const c = document.createElement("canvas").getContext("2d"), sp = fontSpec(f);
+  c.font = `${sp.weight} 100px "${sp.fam}"`; const m = c.measureText("H");
+  const r = (m.actualBoundingBoxAscent || 72) / 100;
+  if (document.fonts && document.fonts.check(`${sp.weight} 20px "${sp.fam}"`)) fontCache[f] = r;
+  return r;
+}
+function setFont(ctx, o){ const sp = fontSpec(o.font); const px = o.size / capRatio(o.font);
+  ctx.font = `${o.italic?"italic ":""}${sp.weight} ${px}px "${sp.fam}", "Arial Black", Arial, sans-serif`;
+  try { ctx.letterSpacing = (o.spacing||0) + "px"; } catch(e){} return px; }
+
+// Abmessungen eines Objekts (lokal, unrotiert) in mm
+function objSize(o){
+  if (o.type === "text"){ const c = measCtx(); setFont(c, o); const m = c.measureText(o.text || " ");
+    return {w: Math.max(1, m.width) * o.sx/100 + 2*o.bold, h: Math.max(1,(m.actualBoundingBoxAscent + m.actualBoundingBoxDescent)) + 2*o.bold}; }
+  if (o.type === "shape") return {w:o.w, h:o.h};
+  if (o.type === "image") return {w:o.h*o.aspect, h:o.h};
+  return {w:0,h:0};
+}
+let _mc; function measCtx(){ return _mc || (_mc = document.createElement("canvas").getContext("2d")); }
+
+// ---------------- Logo-Bilder ----------------
+function prepImage(o){
+  const img = new Image();
+  img.onload = () => {
+    const maxW = 600, sc = Math.min(1, maxW / img.width), w = Math.max(1, Math.round(img.width*sc)), h = Math.max(1, Math.round(img.height*sc));
+    o.aspect = w / h; const cv = document.createElement("canvas"); cv.width = w; cv.height = h; const c = cv.getContext("2d");
+    c.fillStyle = "#fff"; c.fillRect(0,0,w,h); c.drawImage(img, 0, 0, w, h);
+    o._src = c.getImageData(0,0,w,h); o._cv = cv; o._dirty = true; buildImageMask(o); changed(false);
+  };
+  img.src = o.src;
+}
+function buildImageMask(o){
+  if (!o._src) return; const d = o._src.data, w = o._src.width, h = o._src.height, out = o._cv.getContext("2d").createImageData(w, h);
+  const thr = o.thr/100*255;
+  for (let i=0;i<w*h;i++){ const L = 0.299*d[4*i]+0.587*d[4*i+1]+0.114*d[4*i+2]; let on = L < thr; if (o.invert) on = !on;
+    out.data[4*i]=0; out.data[4*i+1]=0; out.data[4*i+2]=0; out.data[4*i+3]= on?255:0; }
+  const m = document.createElement("canvas"); m.width = w; m.height = h; m.getContext("2d").putImageData(out,0,0); o._mask = m; o._thr = o.thr; o._inv = o.invert;
+}
+
+// ---------------- Motiv zeichnen (Papieransicht, mm-Koordinaten) ----------------
+// ctx ist so transformiert, dass 1 Einheit = 1 mm, Ursprung u=0 / Bandoberkante, y nach unten.
+function drawObjectAt(ctx, o, x){
+  ctx.save(); ctx.translate(x, W/2 - o.y); ctx.rotate((o.rot||0)*Math.PI/180);
+  if (o.type === "text"){
+    setFont(ctx, o); ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    const m = ctx.measureText(o.text || " "); const off = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent)/2;
+    ctx.scale(o.sx/100, 1);
+    if (o.bold > 0){ ctx.lineWidth = 2*o.bold/(o.sx/100); ctx.lineJoin = "round"; ctx.strokeText(o.text, 0, off); }
+    ctx.fillText(o.text, 0, off);
+  } else if (o.type === "shape"){ fillShape(ctx, o.shape, o.w, o.h, o.outline); }
+  else if (o.type === "image" && o._mask){ if (o._thr !== o.thr || o._inv !== o.invert) buildImageMask(o); const h = o.h, w = h*o.aspect; ctx.drawImage(o._mask, -w/2, -h/2, w, h); }
+  ctx.restore();
+}
+function drawObject(ctx, o){
+  const Cc = C();
+  if (o.type === "stroke"){
+    ctx.save(); ctx.globalCompositeOperation = o.erase ? "destination-out" : "source-over"; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineWidth = o.width;
+    for (const off of [-Cc, 0, Cc]){ ctx.beginPath(); o.pts.forEach((p,i)=>{ const X=p[0]+off, Y=W/2-p[1]; i?ctx.lineTo(X,Y):ctx.moveTo(X,Y); }); if (o.pts.length===1) ctx.lineTo(o.pts[0][0]+off+0.01, W/2-o.pts[0][1]); ctx.stroke(); }
+    ctx.restore(); return;
+  }
+  const n = Math.max(1, o.repeat|0), step = Cc/n;
+  for (let k=0;k<n;k++) for (const off of [-Cc,0,Cc]){
+    drawObjectAt(ctx, o, o.x + k*step + off);
+    if (o.type === "text" && o.sep && o.sep !== "none"){ const d = o.sepSize > 0 ? o.sepSize : bandH()-0.4;
+      ctx.save(); ctx.translate(o.x + k*step + step/2 + off, W/2 - o.y); fillShape(ctx, o.sep, d, d, false); ctx.restore(); }
+  }
+}
+const edge = () => S.style === "negative" ? S.rim : S.margin;
+const bandH = () => W - 2*edge();
+
+// ---------------- Masken ----------------
+// Ergebnis: Uint8Array je Pixel: R = erhabene Flaeche, Mo = Motiv (fuer Warnungen), Out = abgeschnittenes Motiv, Br = Bruecken
+let MASK = null;
+const motifCanvas = document.createElement("canvas");
+function buildMask(){
+  const Cc = C(), nx = Math.round(Cc*PPM), ny = W*PPM;
+  motifCanvas.width = nx; motifCanvas.height = ny;
+  const c = motifCanvas.getContext("2d"); c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,nx,ny);
+  c.setTransform(PPM,0,0,PPM,0,0); c.fillStyle = "#000"; c.strokeStyle = "#000";
+  for (const o of S.objects) drawObject(c, o);
+  const A = c.getImageData(0,0,nx,ny).data;
+  const R = new Uint8Array(nx*ny), Mo = new Uint8Array(nx*ny), Out = new Uint8Array(nx*ny), Br = new Uint8Array(nx*ny);
+  const e0 = Math.round(edge()*PPM), e1 = ny - e0;
+  // Bruecken
+  const bw = 1.0*PPM;
+  const inBridge = (x, y) => {
+    if (S.bridges === "lines") return (y >= e0 && y < e0+bw) || (y < e1 && y >= e1-bw);
+    if (S.bridges === "underline"){ const yc = (W/2 + 5)*PPM; return Math.abs(y - yc) < bw/2; }
+    if (S.bridges === "diagonal"){ if (y < e0 || y >= e1) return false; const pitch = 4*PPM; return (((x + y) % pitch) + pitch) % pitch < bw*1.41; }
+    return false;
+  };
+  const neg = S.style === "negative";
+  for (let y=0;y<ny;y++){ const inside = y >= e0 && y < e1;
+    for (let x=0;x<nx;x++){ const k = y*nx+x, m = A[4*k+3] > 127;
+      if (m && !inside) Out[k] = 1;
+      const mm = m && inside; Mo[k] = mm ? 1 : 0;
+      let r = neg ? !mm : mm;
+      if (S.bridges !== "off" && inBridge(x,y)){ if (S.bridgeLow) Br[k] = 1; else r = true; }
+      R[k] = r ? 1 : 0;
+    } }
+  MASK = {R, Mo, Out, Br, nx, ny};
+  return MASK;
+}
+
+// ---------------- Warnungen ----------------
+function erodeDilate(src, nx, ny, rad, erode){ // separierbares Rechteck-Min/Max mit Wrap in x
+  const tmp = new Uint8Array(nx*ny), out = new Uint8Array(nx*ny);
+  for (let y=0;y<ny;y++){ const row=y*nx;
+    for (let x=0;x<nx;x++){ let v = erode ? 1 : 0; for (let d=-rad; d<=rad; d++){ const xx = ((x+d)%nx+nx)%nx, s = src[row+xx]; if (erode ? !s : s){ v = erode ? 0 : 1; break; } } tmp[row+x] = v; } }
+  for (let x=0;x<nx;x++) for (let y=0;y<ny;y++){ let v = erode ? 1 : 0; for (let d=-rad; d<=rad; d++){ const yy = y+d; const s = (yy<0||yy>=ny) ? (erode?0:0) : tmp[yy*nx+x]; if (erode ? !s : s){ v = erode ? 0 : 1; break; } } out[y*nx+x] = v; }
+  return out;
+}
+let WARN = null;
+function computeWarnings(){
+  const {R, Mo, Out, nx, ny} = MASK; const rad = 3;   // Strukturen < 0,6 mm
+  const thin = new Uint8Array(nx*ny);
+  const e0 = Math.round(edge()*PPM), e1 = ny - e0;
+  // erhabene Strukturen zu duenn
+  const open1 = erodeDilate(erodeDilate(R, nx, ny, rad, true), nx, ny, rad, false);
+  // Aussparungen (Negativ) zu schmal -> laufen zu
+  const holes = new Uint8Array(nx*ny); for (let y=e0;y<e1;y++) for (let x=0;x<nx;x++){ const k=y*nx+x; holes[k] = R[k] ? 0 : 1; }
+  const open2 = erodeDilate(erodeDilate(holes, nx, ny, rad, true), nx, ny, rad, false);
+  let nThin = 0;
+  for (let y=e0;y<e1;y++) for (let x=0;x<nx;x++){ const k=y*nx+x; if ((R[k] && !open1[k]) || (holes[k] && !open2[k])){ thin[k]=1; nThin++; } }
+  // Luecken: Spalten ohne erhabene Flaeche ueber die ganze Breite (> 2,5 mm)
+  const gaps = []; let run = -1;
+  const colHas = x => { for (let y=0;y<ny;y++) if (R[y*nx+x]) return true; return false; };
+  const empty = new Uint8Array(nx); for (let x=0;x<nx;x++) empty[x] = colHas(x) ? 0 : 1;
+  let start = -1; for (let x=0;x<2*nx;x++){ const e = empty[x%nx]; if (e && start<0) start = x; if ((!e || x===2*nx-1) && start>=0){ const len = x - start; if (len > 2.5*PPM && start < nx) gaps.push([start, Math.min(len, nx)]); start = -1; } }
+  let anyOut = false; for (let k=0;k<Out.length;k++) if (Out[k]){ anyOut = true; break; }
+  let anyMotif = false; for (let k=0;k<Mo.length;k++) if (Mo[k]){ anyMotif = true; break; }
+  // duenne Stellen zu Inseln gruppieren; winzige Eck-Splitter (Innenecken von Buchstaben) ignorieren
+  let islands = 0; const seen = new Uint8Array(nx*ny), stack = [];
+  for (let k0=0;k0<nx*ny;k0++){ if (!thin[k0] || seen[k0]) continue;
+    const comp = []; stack.push(k0); seen[k0]=1; let x0=1e9,x1=-1,y0=1e9,y1=-1;
+    while (stack.length){ const k = stack.pop(); comp.push(k); const x=k%nx, y=(k/nx)|0; if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+      for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const xx=(x+dx+nx)%nx, yy=y+dy; if (yy<0||yy>=ny) continue; const kk=yy*nx+xx; if (thin[kk] && !seen[kk]){ seen[kk]=1; stack.push(kk); } } }
+    if (comp.length >= 20 && Math.max(x1-x0, y1-y0) >= 8) islands++; else for (const k of comp) thin[k] = 0;
+  }
+  WARN = {thin, gaps, anyOut, anyMotif, islands};
+  renderWarnings();
+}
+function renderWarnings(){
+  const box = $("warns"); const items = [];
+  if (!WARN.anyMotif) items.push(["purple", t("wEmpty")]);
+  if (WARN.islands) items.push(["red", t("wThin", {n: WARN.islands})]);
+  if (WARN.gaps.length) items.push(["yellow", t("wGap", {n: WARN.gaps.length})]);
+  if (WARN.anyOut) items.push(["purple", t("wOut")]);
+  const re = reliefEff(); if (re < S.relief - 0.01) items.push(["muted", t("reliefNote", {r: re.toFixed(2)})]);
+  if (S.size === 0 && ![100,200,300].includes(S.custom)) items.push(["muted", t("wHead")]);
+  if (!items.length) items.push(["ok", t("wOk")]);
+  const col = {red:"var(--red)", yellow:"var(--yellow)", purple:"var(--purple)", ok:"var(--ok)", muted:"var(--muted)"};
+  box.innerHTML = ""; for (const [k, txt] of items){ const d = document.createElement("div"); d.className = "warn"; const i = document.createElement("i"); i.style.background = col[k]; const s = document.createElement("span"); s.textContent = txt; d.append(i, s); box.append(d); }
+}
+// =====================================================================
+//  Geometrie: Hoehenfeld auf dem abgewickelten Band -> Ring (STL)
+//  Masse passend zur Stamproller-Nabe (Lager 608) und zum OpenSCAD-Designer
+// =====================================================================
+const BRG_OD = 22.0, BRG_FIT = 0.10, BRG_W = 7.0, LIP_D = 17.0, HUB_WALL = 1.6, RING_T_MIN = 2.5, RING_SQUEEZE = 0.3,
+      HUB_KEYS = 6, KEY_R = 0.7, NOTCH_RAD = 0.85, NOTCH_TAN = 1.3, WALL_MIN = 1.0, SLOPE_START = 0.8, SLOPE_STEP = 0.4, BRIDGE_DROP = 0.5;
+const rOut = () => C() / (2*Math.PI);
+const hubR = () => Math.max((BRG_OD + BRG_FIT)/2 + HUB_WALL, rOut() - 1.5 - RING_T_MIN);   // fest -> passt auf vorhandene Naben
+const reliefEff = () => Math.min(S.relief, rOut() - (hubR() + NOTCH_RAD + WALL_MIN));
+
+class MeshB{ constructor(){ this.v=[]; this.t=[]; } add(x,y,z){ this.v.push(x,y,z); return this.v.length/3-1; } tri(a,b,c){ this.t.push(a,b,c); } }
+
+// Raster aus der Pixelmaske (Flaechenmittel), gespiegelt fuer die Rolle: Rasterindex i liegt bei Winkel +i*du/r und zeigt Papier-u = C - i*du
+function sampleGrid(src, res){
+  const Cc = C(), {nx, ny} = MASK;
+  const N = Math.max(60, Math.round(Cc/res)), M = Math.max(10, Math.round(W/res)), du = Cc/N, dv = W/M;
+  const s = new Float32Array(N*(M+1));
+  const bw = Math.max(1, Math.round(du*PPM)), bh = Math.max(1, Math.round(dv*PPM));
+  for (let j=0;j<=M;j++){
+    const py = (W - j*dv) * PPM;                 // v nach oben (j=0 -> Unterkante z=0)
+    for (let i=0;i<N;i++){
+      const px = (Cc - i*du) * PPM; let sum=0, cnt=0;
+      for (let yy=Math.floor(py-bh/2); yy<Math.ceil(py+bh/2); yy++){
+        const y2 = Math.min(ny-1, Math.max(0, yy));
+        for (let xx=Math.floor(px-bw/2); xx<Math.ceil(px+bw/2); xx++){ let x2 = xx % nx; if (x2<0) x2 += nx; sum += src[y2*nx+x2]; cnt++; }
+      }
+      s[j*N+i] = cnt ? sum/cnt : 0;
+    }
+  }
+  return {s, N, M, du, dv};
+}
+// Material nach unten (-v, Druckrichtung) um g mm verbreitern -> 45-Grad-Auslauf unter Kanten
+function growDown(g, mm){
+  const {s, N, M, dv} = g, out = new Float32Array(s.length), lim = mm/dv;
+  for (let i=0;i<N;i++){ let last = -1e9;
+    for (let j=M;j>=0;j--){ const k=j*N+i; if (s[k] >= 0.5) last = j; out[k] = (s[k] >= 0.5 || (last - j) <= lim) ? 1 : 0; } }
+  return {...g, s: out};
+}
+
+// Zwei-Stufen-Oberflaeche (Marching Triangles mit senkrechten Waenden), gewickelt auf den Zylinder
+function buildTop(mb, g, Rhi, Rlo){
+  const {s, N, M, du, dv} = g, Ro = rOut();
+  const hi = k => s[k] >= 0.5;
+  const P = (u,v,r) => { const th = u/Ro; return mb.add(r*Math.cos(th), r*Math.sin(th), v); };
+  const corner = new Int32Array(N*(M+1)).fill(-1);
+  const wrapI = i => ((i%N)+N)%N;
+  const cIdx = (i,j) => { const ii=wrapI(i), k=j*N+ii; if (corner[k]<0) corner[k]=P(ii*du, j*dv, hi(k)?Rhi:Rlo); return corner[k]; };
+  const edgeMap = new Map();
+  const cross = (i0,j0,i1,j1) => {
+    const a0=wrapI(i0), a1=wrapI(i1), k0=j0*N+a0, k1=j1*N+a1;
+    const key = k0<k1 ? k0*16777216+k1 : k1*16777216+k0;
+    let e = edgeMap.get(key);
+    if (!e){ const s0=s[k0], s1=s[k1]; let tt=(0.5-s0)/(s1-s0); if (!isFinite(tt)) tt=0.5; tt=Math.min(0.98,Math.max(0.02,tt));
+      const u=(i0+(i1-i0)*tt)*du, v=(j0+(j1-j0)*tt)*dv; e=[P(u,v,Rlo), P(u,v,Rhi)]; edgeMap.set(key,e); }
+    return e;
+  };
+  const wall = (P0,Q0) => { const [pl,ph]=P0, [ql,qh]=Q0; mb.tri(pl,ql,qh); mb.tri(pl,qh,ph); };
+  const triCase = (A,B,Cn) => {
+    const kA=A[1]*N+wrapI(A[0]), kB=B[1]*N+wrapI(B[0]), kC=Cn[1]*N+wrapI(Cn[0]);
+    const h=[hi(kA),hi(kB),hi(kC)], cnt=h[0]+h[1]+h[2], V=[A,B,Cn], ci=[cIdx(...A),cIdx(...B),cIdx(...Cn)];
+    if (cnt===0||cnt===3){ mb.tri(ci[0],ci[1],ci[2]); return; }
+    const single = cnt===1 ? h.indexOf(true) : h.indexOf(false), a=single, b=(single+1)%3, c=(single+2)%3;
+    const xab = cross(V[a][0],V[a][1],V[b][0],V[b][1]), xca = cross(V[c][0],V[c][1],V[a][0],V[a][1]);
+    if (cnt===1){ mb.tri(ci[a],xab[1],xca[1]); mb.tri(xab[0],ci[b],ci[c]); mb.tri(xab[0],ci[c],xca[0]); wall(xab,xca); }
+    else { mb.tri(ci[a],xab[0],xca[0]); mb.tri(xab[1],ci[b],ci[c]); mb.tri(xab[1],ci[c],xca[1]); wall(xca,xab); }
+  };
+  for (let j=0;j<M;j++) for (let i=0;i<N;i++){ triCase([i,j],[i+1,j],[i+1,j+1]); triCase([i,j],[i+1,j+1],[i,j+1]); }
+  const ring0=[], ringW=[]; for (let i=0;i<N;i++){ ring0.push(cIdx(i,0)); ringW.push(cIdx(i,M)); }
+  return {ring0, ringW, ang: i => i*2*Math.PI/N};
+}
+function polarRing(mb, rfun, K, z){ const r=[]; for (let k=0;k<K;k++){ const a=k*2*Math.PI/K, rr=rfun(a); r.push(mb.add(rr*Math.cos(a), rr*Math.sin(a), z)); } return r; }
+function band(mb, lo, hi, inward){ const K=lo.length; for (let k=0;k<K;k++){ const k1=(k+1)%K;
+  if (inward){ mb.tri(lo[k],hi[k],hi[k1]); mb.tri(lo[k],hi[k1],lo[k1]); } else { mb.tri(lo[k],lo[k1],hi[k1]); mb.tri(lo[k],hi[k1],hi[k]); } } }
+function annulus(mb, O, angO, I, bottom){
+  const n=O.length, m=I.length; let a=0, b=0; const angI = k => k*2*Math.PI/m;
+  while (a<n || b<m){
+    const nextO = angO(a+1), nextI = angI(b+1);
+    if (b>=m || (a<n && nextO <= nextI)){ const o0=O[a%n], o1=O[(a+1)%n], i0=I[b%m]; bottom ? mb.tri(o0,i0,o1) : mb.tri(o0,o1,i0); a++; }
+    else { const o0=O[a%n], i0=I[b%m], i1=I[(b+1)%m]; bottom ? mb.tri(o0,i0,i1) : mb.tri(o0,i1,i0); b++; }
+  }
+}
+// Kreis mit n Ausbuchtungen (Rippen der Nabe), Radius rn auf Radius center
+function bumpR(a, base, center, rn, n){ let best = base;
+  for (let i=0;i<n;i++){ let d = a - i*2*Math.PI/n; d = Math.atan2(Math.sin(d), Math.cos(d));
+    const off = center*Math.sin(d); if (Math.abs(off) < rn){ const far = center*Math.cos(d) + Math.sqrt(rn*rn-off*off); if (far > best) best = far; } }
+  return best; }
+// Bohrung des TPU-Rings: Kreis + elliptische Nuten (radial NOTCH_RAD, tangential NOTCH_TAN) wie im OpenSCAD-Designer
+function boreR(a){ const hr = hubR(), rb = hr - RING_SQUEEZE/2; let best = rb;
+  for (let i=0;i<HUB_KEYS;i++){ let d = a - i*2*Math.PI/HUB_KEYS; d = Math.atan2(Math.sin(d), Math.cos(d)); if (Math.abs(d) > 0.5) continue;
+    const cd=Math.cos(d), sd=Math.sin(d), A = (cd/NOTCH_RAD)**2 + (sd/NOTCH_TAN)**2, B = -2*hr*cd/(NOTCH_RAD**2), Cq = (hr/NOTCH_RAD)**2 - 1;
+    const disc = B*B - 4*A*Cq; if (disc >= 0){ const tt = (-B + Math.sqrt(disc))/(2*A); if (tt > best) best = tt; } }
+  return best; }
+function bearingProfile(){ const lipH=(W-BRG_W)/2, rs=(BRG_OD+BRG_FIT)/2; return [[0,LIP_D/2],[lipH,LIP_D/2],[lipH,rs],[W-0.8,rs],[W,rs+0.8]]; }
+
+function closeShell(mb, top, inner){ annulus(mb, top.ring0, top.ang, inner.first, true); annulus(mb, top.ringW, top.ang, inner.last, false); }
+function innerBore(mb, part){
+  if (part === "ring"){ const a = polarRing(mb, boreR, 720, 0), b = polarRing(mb, boreR, 720, W); band(mb, a, b, true); return {first:a, last:b}; }
+  const prof = bearingProfile(); let prev=null, first=null;
+  prof.forEach(([z,r]) => { const ring = polarRing(mb, () => r, 360, z); if (prev) band(mb, prev, ring, true); else first = ring; prev = ring; });
+  return {first, last: prev};
+}
+function simpleInner(mb, r){ const a = polarRing(mb, () => r, 360, 0), b = polarRing(mb, () => r, 360, W); band(mb, a, b, true); return {first:a, last:b}; }
+
+// Kompletter Ring: Hauptschale + (optional) Schraegen-Schalen + nicht druckende Bruecken.
+// Die Zusatzschalen ueberlappen die Hauptschale (Slicer vereinigen das beim Slicen).
+function buildRoller(res, opts){
+  opts = opts || {};
+  const Ro = rOut(), re = reliefEff(), Rb = Ro - re, mb = new MeshB();
+  const g = sampleGrid(MASK.R, res);
+  const s0 = S.slopes ? Math.min(SLOPE_START, re) : re, nsl = S.slopes ? Math.max(1, Math.ceil((re - s0)/SLOPE_STEP)) : 1, st = S.slopes ? (re - s0)/nsl : 0;
+  closeShell(mb, buildTop(mb, g, Ro, Rb), innerBore(mb, S.part));
+  if (S.slopes && !opts.preview) for (let j=1;j<nsl;j++){
+    const top = buildTop(mb, growDown(g, j*st), Ro - (s0 + j*st), Rb - 0.3); closeShell(mb, top, simpleInner(mb, Rb - 0.6));
+  }
+  if (S.bridges !== "off" && S.bridgeLow && !opts.preview){
+    const gb = sampleGrid(MASK.Br, res); const top = buildTop(mb, gb, Ro - BRIDGE_DROP, Rb - 0.3); closeShell(mb, top, simpleInner(mb, Rb - 0.6));
+  }
+  return mb;
+}
+function buildHub(){
+  const mb = new MeshB(), hr = hubR(), K = 720;
+  const f = a => bumpR(a, hr, hr, KEY_R, HUB_KEYS);
+  const o0 = polarRing(mb, f, K, 0), oW = polarRing(mb, f, K, W); band(mb, o0, oW, false);
+  const inner = innerBore(mb, "bearing");
+  annulus(mb, o0, k=>k*2*Math.PI/K, inner.first, true); annulus(mb, oW, k=>k*2*Math.PI/K, inner.last, false);
+  return mb;
+}
+function toSTL(mb, name){
+  const nt = mb.t.length/3, buf = new ArrayBuffer(84 + nt*50), dv = new DataView(buf);
+  const hdr = ("Stamproller Roll Designer " + name).slice(0,79); for (let i=0;i<hdr.length;i++) dv.setUint8(i, hdr.charCodeAt(i) & 127);
+  dv.setUint32(80, nt, true); const V = mb.v; let o = 84;
+  for (let q=0;q<nt;q++){
+    const a=mb.t[3*q]*3, b=mb.t[3*q+1]*3, c=mb.t[3*q+2]*3;
+    const ux=V[b]-V[a], uy=V[b+1]-V[a+1], uz=V[b+2]-V[a+2], wx=V[c]-V[a], wy=V[c+1]-V[a+1], wz=V[c+2]-V[a+2];
+    let nx=uy*wz-uz*wy, ny=uz*wx-ux*wz, nz=ux*wy-uy*wx; const l=Math.hypot(nx,ny,nz)||1;
+    dv.setFloat32(o,nx/l,true); dv.setFloat32(o+4,ny/l,true); dv.setFloat32(o+8,nz/l,true); o+=12;
+    for (const p of [a,b,c]){ dv.setFloat32(o,V[p],true); dv.setFloat32(o+4,V[p+1],true); dv.setFloat32(o+8,V[p+2],true); o+=12; }
+    dv.setUint16(o,0,true); o+=2;
+  }
+  return new Uint8Array(buf);
+}
+
+// ---------------- ZIP ----------------
+const CRC = (()=>{ const tb=new Uint32Array(256); for (let n=0;n<256;n++){ let c=n; for (let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; tb[n]=c>>>0; } return tb; })();
+function crc32(u8){ let c=0xFFFFFFFF; for (let i=0;i<u8.length;i++) c = CRC[(c^u8[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+async function deflate(u8){ if (typeof CompressionStream === "undefined") return null;
+  try { const cs = new CompressionStream("deflate-raw"); return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(cs)).arrayBuffer()); } catch(e){ return null; } }
+async function makeZip(files){
+  const parts=[], central=[]; let off=0;
+  for (const f of files){
+    const name = new TextEncoder().encode(f.name), crc = crc32(f.data), def = await deflate(f.data);
+    const method = def && def.length < f.data.length ? 8 : 0, body = method ? def : f.data;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,method,true);
+    lh.setUint32(14,crc,true); lh.setUint32(18,body.length,true); lh.setUint32(22,f.data.length,true); lh.setUint16(26,name.length,true);
+    parts.push(new Uint8Array(lh.buffer), name, body);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true); ch.setUint16(10,method,true);
+    ch.setUint32(16,crc,true); ch.setUint32(20,body.length,true); ch.setUint32(24,f.data.length,true); ch.setUint16(28,name.length,true); ch.setUint32(42,off,true);
+    central.push(new Uint8Array(ch.buffer), name); off += 30 + name.length + body.length;
+  }
+  const csize = central.reduce((a,b)=>a+b.length,0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true); end.setUint32(12,csize,true); end.setUint32(16,off,true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], {type:"application/zip"});
+}
+// =====================================================================
+//  Oberflaeche: Band-Editor, Eigenschaften, Papier-Vorschau, 3D, Download
+// =====================================================================
+const stage = $("stage"), sctx = stage.getContext("2d");
+const COL = { ink:"#1b1b22", band:"#f7f4ec", seam:"#f29a1f", red:"rgba(214,54,46,.75)", yellow:"rgba(226,164,0,.55)", purple:"rgba(138,58,214,.6)", sel:"#f29a1f" };
+const RULER = 22;
+let view = {k: 8, ox: 0, oy: RULER};   // k = Pixel (CSS) pro mm
+
+// ---------- Zeichnen des Editors ----------
+let maskImg = document.createElement("canvas");
+function maskToImage(){
+  const {R, Out, Br, nx, ny} = MASK; maskImg.width = nx; maskImg.height = ny;
+  const c = maskImg.getContext("2d"), id = c.createImageData(nx, ny), d = id.data;
+  const showW = $("showWarn").checked && WARN, thin = showW ? WARN.thin : null;
+  const gapCol = new Uint8Array(nx); if (showW) for (const [s,len] of WARN.gaps) for (let x=s;x<s+len;x++) gapCol[x%nx] = 1;
+  for (let k=0;k<nx*ny;k++){
+    let r=247,g=244,b=236;
+    if (R[k]){ r=27; g=27; b=34; } else if (Br[k]){ r=120; g=124; b=150; }
+    if (showW){ const x = k % nx;
+      if (thin && thin[k]){ r=214; g=54; b=46; }
+      else if (Out[k]){ r = (r+138*2)/3|0; g=(g+58*2)/3|0; b=(b+214*2)/3|0; }
+      else if (gapCol[x]){ r=(r+226)/2|0; g=(g+164)/2|0; b=(b+0)/2|0; } }
+    d[4*k]=r; d[4*k+1]=g; d[4*k+2]=b; d[4*k+3]=255;
+  }
+  c.putImageData(id, 0, 0);
+}
+function layoutStage(){
+  const box = $("stagebox"), avail = Math.max(300, box.clientWidth - 24), zoom = +$("zoom").value;
+  const cssW = avail * zoom; view.k = cssW / C(); const cssH = RULER + W*view.k + 14;
+  const dpr = window.devicePixelRatio || 1;
+  stage.style.width = cssW + "px"; stage.style.height = cssH + "px"; stage.width = Math.round(cssW*dpr); stage.height = Math.round(cssH*dpr);
+  sctx.setTransform(dpr,0,0,dpr,0,0);
+}
+function renderStage(){
+  const k = view.k, Cc = C(), cssW = Cc*k, cssH = RULER + W*k + 14;
+  const styles = getComputedStyle(document.documentElement);
+  sctx.clearRect(0,0,cssW,cssH);
+  // Lineal (mm)
+  sctx.fillStyle = styles.getPropertyValue("--muted"); sctx.font = "11px " + styles.getPropertyValue("--f-mono"); sctx.textAlign = "center";
+  sctx.strokeStyle = styles.getPropertyValue("--line"); sctx.lineWidth = 1;
+  const step = k > 6 ? 5 : 10;
+  for (let u=0; u<=Cc+0.001; u+=step){ const x = u*k; const major = u % 10 === 0; sctx.beginPath(); sctx.moveTo(x+0.5, RULER-(major?9:5)); sctx.lineTo(x+0.5, RULER-1); sctx.stroke(); if (major && u%(k>4?10:20)===0) sctx.fillText(u+"", Math.min(Math.max(x,10),cssW-14), RULER-11); }
+  // Band
+  sctx.imageSmoothingEnabled = true; sctx.drawImage(maskImg, 0, RULER, cssW, W*k);
+  // Rand-Linien
+  const e = edge(); sctx.setLineDash([4,4]); sctx.strokeStyle = "rgba(242,154,31,.8)";
+  for (const v of [e, W-e]){ const y = RULER + v*k; sctx.beginPath(); sctx.moveTo(0,y); sctx.lineTo(cssW,y); sctx.stroke(); }
+  sctx.setLineDash([]);
+  // Auswahl
+  if (sel && sel.type !== "stroke"){
+    const n = Math.max(1, sel.repeat|0);
+    for (let r=0;r<n;r++){ const bx = ((sel.x + r*Cc/n) % Cc + Cc) % Cc; drawSelBox(sel, bx, r===0); }
+  }
+  // Pinsel-Vorschau
+  if ((tool==="draw"||tool==="erase") && hoverPt){ sctx.strokeStyle = COL.sel; sctx.beginPath(); sctx.arc(hoverPt[0]*k, RULER+(W/2-hoverPt[1])*k, brush*k/2, 0, 2*Math.PI); sctx.stroke(); }
+}
+function selCorners(o, x){
+  const sz = objSize(o), a = (o.rot||0)*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a);
+  const cx = x*view.k, cy = RULER + (W/2 - o.y)*view.k, hw = sz.w/2*view.k + 4, hh = sz.h/2*view.k + 4;
+  const P = (lx,ly) => [cx + lx*ca - ly*sa, cy + lx*sa + ly*ca];
+  return {cx, cy, a, pts:[P(-hw,-hh),P(hw,-hh),P(hw,hh),P(-hw,hh)], scale:P(hw,hh), rot:P(0,-hh-16), top:P(0,-hh)};
+}
+function drawSelBox(o, x, main){
+  const q = selCorners(o, x);
+  sctx.strokeStyle = COL.sel; sctx.lineWidth = main ? 1.5 : 1; sctx.setLineDash(main ? [] : [3,3]);
+  sctx.beginPath(); q.pts.forEach((p,i)=> i?sctx.lineTo(...p):sctx.moveTo(...p)); sctx.closePath(); sctx.stroke(); sctx.setLineDash([]);
+  if (!main) return;
+  sctx.beginPath(); sctx.moveTo(...q.top); sctx.lineTo(...q.rot); sctx.stroke();
+  sctx.fillStyle = "#fff"; sctx.beginPath(); sctx.arc(...q.rot, 6, 0, 2*Math.PI); sctx.fill(); sctx.stroke();
+  sctx.fillRect(q.scale[0]-6, q.scale[1]-6, 12, 12); sctx.strokeRect(q.scale[0]-6, q.scale[1]-6, 12, 12);
+}
+
+// ---------- Papier-Vorschau ----------
+const paper = $("paper"), pctx = paper.getContext("2d");
+let kraftTex = null;
+function makeKraft(w, h){
+  const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d");
+  x.fillStyle = "#c9a46c"; x.fillRect(0,0,w,h);
+  const id = x.getImageData(0,0,w,h), d = id.data; let seed = 7;
+  const rnd = () => (seed = (seed*16807) % 2147483647) / 2147483647;
+  for (let i=0;i<w*h;i++){ const n = (rnd()-0.5)*26 + Math.sin(i%w*0.05 + Math.floor(i/w)*0.3)*3; d[4*i]+=n; d[4*i+1]+=n*0.9; d[4*i+2]+=n*0.7; }
+  x.putImageData(id,0,0); return c;
+}
+function renderPaper(){
+  const dpr = window.devicePixelRatio || 1, cssW = paper.clientWidth || 800, cssH = Math.round(cssW*0.16);
+  paper.width = Math.round(cssW*dpr); paper.height = Math.round(cssH*dpr); paper.style.height = cssH + "px";
+  if (!kraftTex || kraftTex.width !== paper.width) kraftTex = makeKraft(paper.width, paper.height);
+  pctx.setTransform(1,0,0,1,0,0); pctx.drawImage(kraftTex, 0, 0);
+  // Stempelabdruck: erhabene Flaeche in Tinte, Papieransicht (lesbar), ca. 2,3 Rapporte
+  const {R, nx, ny} = MASK, bandPx = paper.height*0.62, sc = bandPx/ny, y0 = (paper.height - bandPx)/2;
+  const ink = document.createElement("canvas"); ink.width = nx; ink.height = ny; const ic = ink.getContext("2d"), id = ic.createImageData(nx, ny);
+  let seed = 3; const rnd = () => (seed = (seed*16807) % 2147483647) / 2147483647;
+  for (let k=0;k<nx*ny;k++){ if (R[k]){ id.data[4*k]=22; id.data[4*k+1]=20; id.data[4*k+2]=26; id.data[4*k+3]= 200 + rnd()*55; } }
+  ic.putImageData(id,0,0);
+  const repW = nx*sc; pctx.globalAlpha = 0.93; pctx.imageSmoothingEnabled = true;
+  for (let x = 12*dpr; x < paper.width; x += repW) pctx.drawImage(ink, x, y0, repW, bandPx);
+  pctx.globalAlpha = 1;
+}
+
+// ---------- 3D-Ring ----------
+let three = null;
+function init3D(){
+  if (typeof THREE === "undefined") return;
+  const cv = $("ring3d"), renderer = new THREE.WebGLRenderer({canvas: cv, antialias: true, alpha: true});
+  const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(35, 1, 1, 1000);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x334, 0.9)); const dl = new THREE.DirectionalLight(0xffffff, 0.8); dl.position.set(40,60,80); scene.add(dl);
+  const group = new THREE.Group(); scene.add(group);
+  three = {renderer, scene, cam, group, mesh:null, rx:-0.9, ry:0.4, drag:null, auto:true};
+  cv.addEventListener("pointerdown", e => { three.drag = [e.clientX, e.clientY, three.rx, three.ry]; three.auto = false; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointermove", e => { if (!three.drag) return; const [x,y,rx,ry] = three.drag; three.ry = ry + (e.clientX-x)*0.01; three.rx = rx + (e.clientY-y)*0.01; draw3D(); });
+  cv.addEventListener("pointerup", () => three.drag = null);
+  const loop = () => { if (three.auto && !matchMedia("(prefers-reduced-motion: reduce)").matches){ three.ry += 0.006; draw3D(); } requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+function draw3D(){
+  if (!three) return; const cv = $("ring3d"), w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w*devicePixelRatio)){ three.renderer.setPixelRatio(devicePixelRatio); three.renderer.setSize(w, h, false); }
+  three.cam.aspect = w/h; three.cam.updateProjectionMatrix();
+  const R = rOut(); three.cam.position.set(0, 0, R*4.2 + 20); three.cam.lookAt(0,0,0);
+  three.group.rotation.set(three.rx, three.ry, 0); three.renderer.render(three.scene, three.cam);
+}
+function update3D(){
+  if (!three || !MASK) return;
+  const mb = buildRoller(0.45, {preview:true});
+  const pos = new Float32Array(mb.t.length*3); for (let i=0;i<mb.t.length;i++){ const v = mb.t[i]*3; pos[3*i]=mb.v[v]; pos[3*i+1]=mb.v[v+1]; pos[3*i+2]=mb.v[v+2]-W/2; }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(pos, 3)); geo.computeVertexNormals();
+  if (three.mesh){ three.group.remove(three.mesh); three.mesh.geometry.dispose(); }
+  three.mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: 0x2c2f3a, roughness: 0.85, metalness: 0, side: THREE.DoubleSide}));
+  three.group.add(three.mesh); draw3D();
+}
+
+// ---------- Aenderungen ----------
+let t3d = null, tWarn = null;
+function changed(heavy){
+  buildMask(); maskToImage(); renderStage(); renderPaper();
+  clearTimeout(tWarn); tWarn = setTimeout(() => { computeWarnings(); maskToImage(); renderStage(); }, heavy ? 30 : 250);
+  clearTimeout(t3d); t3d = setTimeout(update3D, heavy ? 60 : 700);
+  $("metaSize").textContent = `${C()} mm · Ø ${(2*rOut()).toFixed(1)} mm · ${W} mm`;
+  save();
+}
+function save(){ try { localStorage.setItem("stamproller-design", serialize()); } catch(e){} }
+function serialize(){ return JSON.stringify({v:1, S: {...S, objects: S.objects.map(o => { const c = {...o}; delete c._src; delete c._cv; delete c._mask; delete c._thr; delete c._inv; delete c._dirty; return c; })}}); }
+function loadState(json){ const d = JSON.parse(json); if (!d || !d.S) return false; Object.assign(S, d.S); uid = 1 + Math.max(0, ...S.objects.map(o=>o.id||0)); S.objects.forEach(o => { if (o.type==="image") prepImage(o); }); sel = null; return true; }
+
+// ---------- Interaktion ----------
+let drag = null, hoverPt = null;
+function evMM(e){ const r = stage.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top; return {x, y, u: x/view.k, v: W/2 - (y - RULER)/view.k}; }
+function hitObject(px, py){
+  const Cc = C();
+  for (let i=S.objects.length-1;i>=0;i--){ const o = S.objects[i];
+    if (o.type === "stroke"){ const u = px/view.k, v = W/2 - (py-RULER)/view.k; for (const p of o.pts) for (const off of [-Cc,0,Cc]) if (Math.hypot(p[0]+off-u, p[1]-v) < o.width/2+0.6) return o; continue; }
+    const n = Math.max(1,o.repeat|0), sz = objSize(o);
+    for (let r=0;r<n;r++) for (const off of [-Cc,0,Cc]){
+      const cx = (o.x + r*Cc/n + off)*view.k, cy = RULER + (W/2 - o.y)*view.k, a = -(o.rot||0)*Math.PI/180;
+      const dx = px-cx, dy = py-cy, lx = dx*Math.cos(a) - dy*Math.sin(a), ly = dx*Math.sin(a) + dy*Math.cos(a);
+      if (Math.abs(lx) <= sz.w/2*view.k + 4 && Math.abs(ly) <= sz.h/2*view.k + 4) return o;
+    }
+  }
+  return null;
+}
+stage.addEventListener("pointerdown", e => {
+  const m = evMM(e); stage.setPointerCapture(e.pointerId);
+  if (tool === "draw" || tool === "erase"){
+    snapshot(); const o = {id:uid++, type:"stroke", pts:[[m.u, m.v]], width:brush, erase: tool==="erase"}; S.objects.push(o); drag = {mode:"draw", o}; changed(false); return;
+  }
+  if (sel && sel.type !== "stroke"){
+    const q = selCorners(sel, ((sel.x % C()) + C()) % C());
+    if (Math.hypot(m.x-q.rot[0], m.y-q.rot[1]) < 10){ snapshot(); drag = {mode:"rot", o:sel, cx:q.cx, cy:q.cy}; return; }
+    if (Math.hypot(m.x-q.scale[0], m.y-q.scale[1]) < 10){ snapshot(); drag = {mode:"scale", o:sel, d0: Math.hypot(m.x-q.cx, m.y-q.cy), s0: {...sel}}; return; }
+  }
+  const o = hitObject(m.x, m.y); sel = o; buildProps(); buildLayers();
+  if (o && o.type !== "stroke"){ snapshot(); drag = {mode:"move", o, u0:m.u, v0:m.v, x0:o.x, y0:o.y}; }
+  renderStage();
+});
+stage.addEventListener("pointermove", e => {
+  const m = evMM(e); hoverPt = [m.u, m.v];
+  if (!drag){ if (tool!=="select") renderStage(); return; }
+  const o = drag.o;
+  if (drag.mode === "draw"){ const last = o.pts[o.pts.length-1]; if (Math.hypot(m.u-last[0], m.v-last[1]) > 0.15){ o.pts.push([m.u, m.v]); changed(false); } return; }
+  if (drag.mode === "move"){ const Cc = C(); o.x = ((drag.x0 + m.u - drag.u0) % Cc + Cc) % Cc; o.y = Math.max(-W, Math.min(W, drag.y0 + m.v - drag.v0)); if (!e.shiftKey) o.y = Math.abs(o.y) < 0.4 ? 0 : o.y; }
+  if (drag.mode === "rot"){ let a = Math.atan2(m.y - drag.cy, m.x - drag.cx)*180/Math.PI + 90; if (!e.shiftKey) a = Math.round(a/5)*5; if (Math.abs(a) < 3 || Math.abs(a-360) < 3) a = 0; o.rot = a > 180 ? a-360 : a; }
+  changed(false); buildPropsValues();
+});
+// Skalieren braucht den Mittelpunkt zur Startzeit
+stage.addEventListener("pointermove", e => {
+  if (!drag || drag.mode !== "scale") return; const m = evMM(e), o = drag.o, s0 = drag.s0;
+  const q = selCorners(s0, ((s0.x % C()) + C()) % C()); const f = Math.max(0.1, Math.hypot(m.x-q.cx, m.y-q.cy) / drag.d0);
+  if (o.type === "text") o.size = Math.max(1, +(s0.size*f).toFixed(2));
+  if (o.type === "shape"){ o.w = Math.max(0.5, +(s0.w*f).toFixed(2)); o.h = Math.max(0.5, +(s0.h*f).toFixed(2)); }
+  if (o.type === "image") o.h = Math.max(1, +(s0.h*f).toFixed(2));
+  changed(false); buildPropsValues();
+}, true);
+stage.addEventListener("pointerup", () => { if (drag){ drag = null; changed(true); buildLayers(); } });
+stage.addEventListener("pointerleave", () => { hoverPt = null; renderStage(); });
+window.addEventListener("keydown", e => {
+  if (["INPUT","SELECT","TEXTAREA"].includes(document.activeElement.tagName)) return;
+  if ((e.key === "Delete" || e.key === "Backspace") && sel){ snapshot(); S.objects = S.objects.filter(o => o !== sel); sel = null; buildProps(); buildLayers(); changed(true); e.preventDefault(); }
+  if ((e.metaKey||e.ctrlKey) && e.key.toLowerCase() === "z"){ undo(); e.preventDefault(); }
+  if (sel && sel.type !== "stroke" && e.key.startsWith("Arrow")){ const d = e.shiftKey ? 2 : 0.5; snapshot();
+    if (e.key==="ArrowLeft") sel.x -= d; if (e.key==="ArrowRight") sel.x += d; if (e.key==="ArrowUp") sel.y += d; if (e.key==="ArrowDown") sel.y -= d; changed(false); buildPropsValues(); e.preventDefault(); }
+});
+
+// ---------- Eigenschaften ----------
+let snapTimer = null;
+function softSnapshot(){ if (!snapTimer) snapshot(); clearTimeout(snapTimer); snapTimer = setTimeout(() => snapTimer = null, 900); }
+function row(label, input, out){ const r = document.createElement("div"); r.className = "row"; const l = document.createElement("label"); l.textContent = label; l.htmlFor = input.id; r.append(l, input); if (out) r.append(out); return r; }
+function rng(id, min, max, step, val, fmt, on){ const i = document.createElement("input"); i.type = "range"; i.id = id; i.min = min; i.max = max; i.step = step; i.value = val;
+  const o = document.createElement("output"); o.id = id + "V"; o.textContent = fmt(val); i.addEventListener("input", () => { softSnapshot(); on(+i.value); o.textContent = fmt(+i.value); changed(false); }); return [i, o]; }
+function sel_(id, opts, val, on){ const s = document.createElement("select"); s.id = id; for (const [v, txt] of opts){ const op = document.createElement("option"); op.value = v; op.textContent = txt; s.append(op); } s.value = val;
+  s.addEventListener("change", () => { snapshot(); on(s.value); changed(true); buildLayers(); }); return s; }
+function chk(id, val, on){ const c = document.createElement("input"); c.type = "checkbox"; c.id = id; c.checked = val; c.addEventListener("change", () => { snapshot(); on(c.checked); changed(true); }); return c; }
+const mm = v => (+v).toFixed(1) + " mm";
+function buildProps(){
+  const box = $("props"); box.innerHTML = ""; const o = sel;
+  if (!o){ const p = document.createElement("p"); p.className = "hint"; p.textContent = tool==="draw"||tool==="erase" ? "" : t("noSel"); box.append(p);
+    if (tool === "draw" || tool === "erase"){ const [i, out] = rng("pBrush", 0.4, 6, 0.1, brush, mm, v => brush = v); box.append(row(t("pBrush"), i, out)); }
+    $("propTitle").textContent = tool==="draw" ? t("tDraw") : tool==="erase" ? t("tErase") : t("props"); return; }
+  $("propTitle").textContent = o.type==="text" ? t("textLayer") : o.type==="shape" ? t("shapeLayer") : o.type==="image" ? t("imageLayer") : (o.erase ? t("eraseLayer") : t("strokeLayer"));
+  if (o.type === "text"){
+    const ti = document.createElement("input"); ti.type = "text"; ti.id = "pText"; ti.value = o.text; ti.maxLength = 80;
+    ti.addEventListener("input", () => { softSnapshot(); o.text = ti.value; changed(false); buildLayers(); }); box.append(row(t("pText"), ti));
+    box.append(row(t("pFont"), sel_("pFont", FONTS.map(f => [f, fontSpec(f).fam]), o.font, v => o.font = v)));
+    box.append(row(t("pSize"), ...rng("pSize", 1, 40, 0.1, o.size, mm, v => o.size = v)));
+    box.append(row(t("pWidth"), ...rng("pWidth", 40, 250, 1, o.sx, v => v+" %", v => o.sx = v)));
+    box.append(row(t("pSpacing"), ...rng("pSpacing", -1, 6, 0.1, o.spacing, mm, v => o.spacing = v)));
+    box.append(row(t("pBold"), ...rng("pBold", 0, 1, 0.05, o.bold, v => (+v).toFixed(2)+" mm", v => o.bold = v)));
+    box.append(row(t("pItalic"), chk("pItalic", o.italic, v => o.italic = v)));
+    box.append(row(t("pRepeat"), ...rng("pRepeat", 1, 10, 1, o.repeat, v => v+"×", v => o.repeat = v)));
+    box.append(row(t("pSep"), sel_("pSep", [["none", t("sepNone")], ...["flower","dot","star","heart","diamond","sparkle","plus","square","play"].map(s => [s, SHAPE_NAMES[LANG][s]])], o.sep, v => o.sep = v)));
+  }
+  if (o.type === "shape"){
+    const chips = document.createElement("div"); chips.className = "chips";
+    for (const s of SHAPES){ const b = document.createElement("button"); b.className = "chip"; b.title = SHAPE_NAMES[LANG][s]; b.setAttribute("aria-label", SHAPE_NAMES[LANG][s]);
+      const c = document.createElement("canvas"); c.width = 52; c.height = 52; const x = c.getContext("2d"); x.translate(26,26); x.fillStyle = getComputedStyle(document.body).color; x.strokeStyle = x.fillStyle; fillShape(x, s, 40, 40, false); b.append(c);
+      b.addEventListener("click", () => { snapshot(); o.shape = s; changed(true); buildLayers(); }); chips.append(b); }
+    box.append(chips);
+    box.append(row(t("pWidth"), ...rng("pW", 0.5, 120, 0.1, o.w, mm, v => o.w = v)));
+    box.append(row(t("pSize"), ...rng("pH", 0.5, 15, 0.1, o.h, mm, v => o.h = v)));
+    box.append(row(t("pOutline"), chk("pOutline", o.outline, v => o.outline = v)));
+    box.append(row(t("pRepeat"), ...rng("pRepeat", 1, 10, 1, o.repeat, v => v+"×", v => o.repeat = v)));
+  }
+  if (o.type === "image"){
+    box.append(row(t("pSize"), ...rng("pH", 1, 15, 0.1, o.h, mm, v => o.h = v)));
+    box.append(row(t("pThr"), ...rng("pThr", 5, 95, 1, o.thr, v => v+" %", v => o.thr = v)));
+    box.append(row(t("pInvert"), chk("pInvert", o.invert, v => o.invert = v)));
+    box.append(row(t("pRepeat"), ...rng("pRepeat", 1, 10, 1, o.repeat, v => v+"×", v => o.repeat = v)));
+  }
+  if (o.type === "stroke"){ box.append(row(t("pBrush"), ...rng("pBrushO", 0.4, 6, 0.1, o.width, mm, v => o.width = v))); }
+  if (o.type !== "stroke") box.append(row(t("pRot"), ...rng("pRot", -180, 180, 1, o.rot||0, v => v+"°", v => o.rot = v)));
+  const acts = document.createElement("div"); acts.className = "presets";
+  const mk = (key, fn) => { const b = document.createElement("button"); b.className = "btn small"; b.textContent = t(key); b.addEventListener("click", () => { snapshot(); fn(); changed(true); buildProps(); buildLayers(); }); acts.append(b); };
+  if (o.type === "text") mk("fitBand", () => fitText(o));
+  if (o.type !== "stroke") mk("center", () => { o.y = 0; });
+  mk("dup", () => { const c = JSON.parse(JSON.stringify(o, (k,v) => k.startsWith("_") ? undefined : v)); c.id = uid++; if (c.x !== undefined) c.x = (c.x + C()/4) % C(); S.objects.push(c); if (c.type==="image") prepImage(c); sel = c; });
+  mk("front", () => { S.objects = S.objects.filter(x => x !== o); S.objects.push(o); });
+  mk("del", () => { S.objects = S.objects.filter(x => x !== o); sel = null; });
+  box.append(acts);
+}
+function buildPropsValues(){ if (!sel) return; const set = (id, v, f) => { const i = $(id); if (i){ i.value = v; const out = $(id+"V"); if (out) out.textContent = f(v); } };
+  if (sel.type==="text") set("pSize", sel.size, mm); if (sel.type==="shape"){ set("pW", sel.w, mm); set("pH", sel.h, mm); } if (sel.type==="image") set("pH", sel.h, mm);
+  if (sel.type!=="stroke") set("pRot", sel.rot||0, v => Math.round(v)+"°"); }
+function fitText(o){
+  const c = measCtx(), probe = {...o, size:10, bold:0}; setFont(c, probe); const m = c.measureText(o.text || " ");
+  const h = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent, w = m.width*o.sx/100;
+  const sepW = o.sep && o.sep !== "none" ? bandH() + 1.5 : 1.5, seg = C()/Math.max(1,o.repeat) - sepW;
+  const fH = (bandH() - 0.6 - 2*o.bold)/h, fW = (seg - 2*o.bold)/w; o.size = +(10*Math.min(fH, fW)).toFixed(2); o.y = 0;
+  const yOff = 0; o.y = yOff;
+}
+function buildLayers(){
+  const box = $("layers"); box.innerHTML = "";
+  S.objects.slice().reverse().forEach(o => { const d = document.createElement("div"); d.className = "layer"; d.setAttribute("aria-current", o === sel ? "true" : "false"); d.tabIndex = 0;
+    const s = document.createElement("span"); s.textContent = o.type==="text" ? `${t("textLayer")}: ${o.text}` : o.type==="shape" ? `${t("shapeLayer")}: ${SHAPE_NAMES[LANG][o.shape]}` : o.type==="image" ? t("imageLayer") : (o.erase ? t("eraseLayer") : t("strokeLayer"));
+    d.append(s); const pick = () => { sel = o; setTool("select"); buildProps(); buildLayers(); renderStage(); }; d.addEventListener("click", pick); d.addEventListener("keydown", e => { if (e.key==="Enter") pick(); }); box.append(d); });
+}
+
+// ---------- Werkzeuge ----------
+function setTool(tl){ tool = tl; document.querySelectorAll(".tool[data-tool]").forEach(b => b.setAttribute("aria-pressed", b.dataset.tool === tl ? "true" : "false"));
+  stage.classList.toggle("draw", tl !== "select"); if (tl !== "select") sel = null; buildProps(); renderStage(); }
+document.querySelectorAll(".tool[data-tool]").forEach(b => b.addEventListener("click", () => setTool(b.dataset.tool)));
+$("tText").addEventListener("click", () => { snapshot(); const o = newText(LANG==="de" ? "Dein Text" : "Your text", C()/2); S.objects.push(o); fitText(o); sel = o; setTool("select"); changed(true); buildLayers(); buildProps(); setTimeout(()=>{ const i=$("pText"); if (i){ i.focus(); i.select(); } }, 30); });
+$("tShape").addEventListener("click", () => { snapshot(); const o = newShape("star", C()/4); S.objects.push(o); sel = o; setTool("select"); changed(true); buildLayers(); buildProps(); });
+$("tImage").addEventListener("click", () => $("fileImg").click());
+$("fileImg").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader();
+  rd.onload = () => { snapshot(); const o = {id:uid++, type:"image", src: rd.result, thr:50, invert:false, h: bandH()-0.5, aspect:1, x:C()/2, y:0, rot:0, repeat:1}; S.objects.push(o); prepImage(o); sel = o; setTool("select"); buildLayers(); buildProps(); changed(true); };
+  rd.readAsDataURL(f); e.target.value = ""; });
+$("undo").addEventListener("click", undo);
+$("zoom").addEventListener("input", () => { layoutStage(); renderStage(); });
+$("showWarn").addEventListener("change", () => { maskToImage(); renderStage(); });
+
+// ---------- Presets ----------
+function preset(name){
+  snapshot(); S.objects = []; sel = null; const Cc = C();
+  if (name === "name"){ const o = newText("Stamproller", Cc/2); o.sep = "flower"; o.repeat = Cc >= 200 ? 2 : 1; S.objects.push(o); fitText(o); }
+  if (name === "url"){ const o = newText("www.your-shop.com", Cc/2); o.font = "Roboto Condensed:700"; o.sep = "dot"; o.repeat = Math.max(1, Math.round(Cc/100)); S.objects.push(o); fitText(o); }
+  if (name === "fragile"){ const o = newText("FRAGILE", Cc/2); o.font = "Anton"; o.sep = "dot"; o.repeat = Math.max(1, Math.round(Cc/50)); S.objects.push(o); fitText(o); }
+  buildProps(); buildLayers(); changed(true);
+}
+document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => preset(b.dataset.preset)));
+
+// ---------- Einstellungen ----------
+function syncUI(){
+  document.querySelectorAll("#sizeSeg button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.size === S.size ? "true" : "false"));
+  document.querySelectorAll("#styleSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.style === S.style ? "true" : "false"));
+  document.querySelectorAll("#langSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.lang === LANG ? "true" : "false"));
+  $("customC").value = C(); $("relief").value = S.relief; $("reliefV").textContent = mm(S.relief); $("rim").value = S.rim; $("rimV").textContent = mm(S.rim);
+  $("bridges").value = S.bridges; $("bridgeLow").checked = S.bridgeLow; $("slopes").checked = S.slopes; $("part").value = S.part; $("withHub").checked = S.withHub;
+}
+function fillSelects(){
+  const fill = (id, opts) => { const s = $(id), v = s.value; s.innerHTML = ""; for (const [val, key] of opts){ const o = document.createElement("option"); o.value = val; o.textContent = t(key); s.append(o); } if (v) s.value = v; };
+  fill("bridges", [["off","brOff"],["lines","brLines"],["underline","brUnder"],["diagonal","brDiag"]]);
+  fill("part", [["ring","partRing"],["one","partOne"],["hub","partHub"]]);
+}
+function applyLang(){
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-i]").forEach(el => el.textContent = t(el.dataset.i));
+  fillSelects(); syncUI(); buildProps(); buildLayers(); if (WARN) renderWarnings();
+}
+document.querySelectorAll("#sizeSeg button").forEach(b => b.addEventListener("click", () => { snapshot(); const old = C(); S.size = +b.dataset.size; rescaleX(old); layoutStage(); syncUI(); changed(true); }));
+document.querySelectorAll("#styleSeg button").forEach(b => b.addEventListener("click", () => { snapshot(); S.style = b.dataset.style; syncUI(); changed(true); }));
+document.querySelectorAll("#langSeg button").forEach(b => b.addEventListener("click", () => { LANG = b.dataset.lang; try { localStorage.setItem("stamproller-lang", LANG); } catch(e){} applyLang(); }));
+function rescaleX(old){ const f = C()/old; S.objects.forEach(o => { if (o.x !== undefined) o.x *= f; if (o.pts) o.pts.forEach(p => p[0] *= f); }); }
+$("customC").addEventListener("change", () => { snapshot(); const old = C(); const v = Math.max(60, Math.min(400, +$("customC").value || 100)); S.size = [100,200,300].includes(v) ? v : 0; S.custom = v; rescaleX(old); layoutStage(); syncUI(); changed(true); });
+$("relief").addEventListener("input", () => { S.relief = +$("relief").value; $("reliefV").textContent = mm(S.relief); changed(false); });
+$("rim").addEventListener("input", () => { S.rim = +$("rim").value; $("rimV").textContent = mm(S.rim); changed(false); });
+$("bridges").addEventListener("change", () => { snapshot(); S.bridges = $("bridges").value; changed(true); });
+$("bridgeLow").addEventListener("change", () => { S.bridgeLow = $("bridgeLow").checked; changed(true); });
+$("slopes").addEventListener("change", () => { S.slopes = $("slopes").checked; changed(true); });
+$("part").addEventListener("change", () => { S.part = $("part").value; changed(true); });
+$("withHub").addEventListener("change", () => { S.withHub = $("withHub").checked; save(); });
+
+// ---------- Datei speichern ----------
+async function saveFile(name, bytes, mime){
+  if (window.claude && typeof window.claude.use === "function"){
+    try { const dl = await window.claude.use("downloads"); if (dl){ let fname = name, data = bytes;
+      if (/\.stl$/i.test(name)){ data = await makeZip([{name, data: bytes}]); fname = name.replace(/\.stl$/i, ".zip"); }
+      await dl.save({filename: fname, data}); return fname; } } catch(e){ if (e && e.code === "declined") throw e; }
+  }
+  const blob = bytes instanceof Blob ? bytes : new Blob([bytes], {type: mime || "application/octet-stream"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); return name;
+}
+const slug = s => (s||"ring").normalize("NFKD").replace(/[^\w.-]+/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"").slice(0,32) || "ring";
+$("btnStl").addEventListener("click", async () => {
+  const busy = $("busy"); busy.textContent = t("busyBuild", {p: 10}); await new Promise(r => setTimeout(r, 30));
+  try {
+    buildMask(); const firstText = (S.objects.find(o => o.type==="text") || {}).text || "design"; const tag = `${C()/10}cm_${slug(firstText)}`;
+    const files = [];
+    if (S.part === "hub") files.push({name: `stamproller_hub_PETG_${C()/10}cm.stl`, data: toSTL(buildHub(), "hub")});
+    else { const res = C() > 220 ? 0.2 : 0.15; const mb = buildRoller(res); busy.textContent = t("busyBuild", {p: 70}); await new Promise(r => setTimeout(r, 20));
+      files.push({name: `stamproller_${S.part==="ring"?"ring_TPU":"roll"}_${tag}.stl`, data: toSTL(mb, tag)});
+      if (S.withHub && S.part === "ring") files.push({name: `stamproller_hub_PETG_${C()/10}cm.stl`, data: toSTL(buildHub(), "hub")}); }
+    let fname;
+    if (files.length === 1) fname = await saveFile(files[0].name, files[0].data, "model/stl");
+    else fname = await saveFile(`stamproller_${tag}.zip`, await makeZip(files), "application/zip");
+    busy.textContent = t("busyDone", {f: fname});
+  } catch(e){ busy.textContent = t("busyFail"); console.error(e); }
+});
+$("btnSave").addEventListener("click", async () => { try { const f = await saveFile("stamproller_design.json", new TextEncoder().encode(serialize()), "application/json"); $("busy").textContent = t("busyDone", {f}); } catch(e){ $("busy").textContent = t("busyFail"); } });
+$("btnLoad").addEventListener("click", () => $("fileDesign").click());
+$("fileDesign").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { try { snapshot(); if (loadState(rd.result)){ layoutStage(); syncUI(); buildProps(); buildLayers(); changed(true); } } catch(err){ $("busy").textContent = "?"; } }; rd.readAsText(f); e.target.value = ""; });
+
+// ---------- Start ----------
+function start(){
+  try { const l = localStorage.getItem("stamproller-lang"); if (l) LANG = l; else LANG = (navigator.language||"en").startsWith("de") ? "de" : "en"; } catch(e){ LANG = (navigator.language||"en").startsWith("de") ? "de" : "en"; }
+  let restored = false; try { const s = localStorage.getItem("stamproller-design"); if (s) restored = loadState(s); } catch(e){}
+  if (!restored || !S.objects.length){ const o = newText("Stamproller", C()/2); o.sep = "flower"; S.objects = [o]; fitText(o); }
+  fillSelects(); applyLang(); layoutStage(); init3D(); changed(true);
+  window.addEventListener("resize", () => { layoutStage(); changed(false); });
+  if (document.fonts){ document.fonts.ready.then(() => { for (const k in fontCache) delete fontCache[k]; S.objects.forEach(o => { if (o.type==="text" && o._autofit) fitText(o); }); changed(true); });
+    document.fonts.onloadingdone = () => { for (const k in fontCache) delete fontCache[k]; changed(false); }; }
+}
+start();
+</script>
+</body></html>
