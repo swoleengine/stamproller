@@ -554,7 +554,9 @@ function bearingProfile(){ const lipH=(W-BRG_W)/2, rs=(BRG_OD+BRG_FIT)/2; return
 
 function closeShell(mb, top, inner){ annulus(mb, top.ring0, top.ang, inner.first, true); annulus(mb, top.ringW, top.ang, inner.last, false); }
 function innerBore(mb, part){
-  if (part === "ring"){ const a = polarRing(mb, boreR, 720, 0), b = polarRing(mb, boreR, 720, W); band(mb, a, b, true); return {first:a, last:b}; }
+  if (part === "ring"){   // Bohrung + 0,8-mm-Einfuehrschraege unten (wie im OpenSCAD-Designer)
+    const hr = hubR(), a = polarRing(mb, x => Math.max(boreR(x), hr + 0.6), 720, 0), m = polarRing(mb, boreR, 720, 0.8), b = polarRing(mb, boreR, 720, W);
+    band(mb, a, m, true); band(mb, m, b, true); return {first:a, last:b}; }
   const prof = bearingProfile(); let prev=null, first=null;
   prof.forEach(([z,r]) => { const ring = polarRing(mb, () => r, 360, z); if (prev) band(mb, prev, ring, true); else first = ring; prev = ring; });
   return {first, last: prev};
@@ -569,8 +571,9 @@ function buildRoller(res, opts){
   const g = sampleGrid(MASK.RF || MASK.R, res);
   const s0 = S.slopes ? Math.min(SLOPE_START, re) : re, nsl = S.slopes ? Math.max(1, Math.ceil((re - s0)/SLOPE_STEP)) : 1, st = S.slopes ? (re - s0)/nsl : 0;
   closeShell(mb, buildTop(mb, g, Ro, Rb), innerBore(mb, S.part));
+  const gs = (S.slopes && !opts.preview) ? sampleGrid(MASK.RF || MASK.R, res*2) : null;   // Schraegen-Stufen: halbe Aufloesung reicht (kleinere STL)
   if (S.slopes && !opts.preview) for (let j=1;j<nsl;j++){
-    const top = buildTop(mb, growDown(g, j*st), Ro - (s0 + j*st), Rb - 0.3); closeShell(mb, top, simpleInner(mb, Rb - 0.6));
+    const top = buildTop(mb, growDown(gs, j*st), Ro - (s0 + j*st), Rb - 0.3); closeShell(mb, top, simpleInner(mb, Rb - 0.6));
   }
   if (S.bridges !== "off" && S.bridgeLow && !opts.preview){
     const gb = sampleGrid(MASK.Br, res); const top = buildTop(mb, gb, Ro - BRIDGE_DROP, Rb - 0.3); closeShell(mb, top, simpleInner(mb, Rb - 0.6));
