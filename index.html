@@ -73,6 +73,7 @@ button,input,select{font:inherit; color:inherit}
 .row output{font-family:var(--f-mono); font-size:12px; width:52px; text-align:right; color:var(--muted)}
 .row input[type=checkbox]{accent-color:var(--navy-2); width:16px; height:16px}
 .hint{font-size:12px; color:var(--muted); line-height:1.45; margin:0}
+.drop{outline:3px dashed var(--signal); outline-offset:-6px}
 .chips{display:flex; flex-wrap:wrap; gap:6px}
 .chip{border:1px solid var(--line); background:var(--bg); border-radius:8px; width:40px; height:40px; display:grid; place-items:center; cursor:pointer}
 .chip canvas{width:26px; height:26px}
@@ -116,7 +117,7 @@ input[type=file]{display:none}
     <button class="tool" id="tDraw" data-tool="draw" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 20c4-1 6-4 9-8l4-4 3 3-4 4c-4 3-7 5-8 9z"/></svg><span data-i="tDraw">Draw</span></button>
     <button class="tool" id="tErase" data-tool="erase" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M7 18h12M5 14l7-7 5 5-5 5H9z"/></svg><span data-i="tErase">Erase</span></button>
     <button class="tool" id="tImage"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/></svg><span data-i="tImage">Logo</span></button>
-    <input type="file" id="fileImg" accept="image/png,image/jpeg,image/svg+xml">
+    <input type="file" id="fileImg" accept="image/png,image/jpeg,image/svg+xml,image/webp">
   </nav>
 
   <main class="center">
@@ -216,7 +217,7 @@ const I18N = {
   footer:"Made for the Stamproller marker roller stamp.",
   noSel:"Click an element on the ring to edit it – or add text, a symbol or your logo with the tools on the left.",
   pText:"Text",pFont:"Font",pSize:"Height",pWidth:"Width",pSpacing:"Spacing",pBold:"Bold",pItalic:"Italic",pRepeat:"Repeats",pSep:"Separator",pSepSize:"Sep. size",pRot:"Rotate",
-  pShape:"Symbol",pOutline:"Outline",pThr:"Threshold",pInvert:"Invert",pBrush:"Brush",fitBand:"Fit to band",center:"Center",dup:"Duplicate",del:"Delete",front:"To front",
+  pShape:"Symbol",pOutline:"Outline",pThr:"Threshold",pMode:"Use",modeAuto:"Automatic",modeDark:"Dark parts",modeLight:"Light parts",modeAlpha:"Non-transparent parts",pSmooth:"Smooth edges",pBold:"Bolder",logoHint:"Your own logo: PNG, JPG or SVG. Best: black logo on white or transparent background, high contrast. Drag & drop or paste (Ctrl+V) works too. Only upload logos you are allowed to use.",logoErr:"This image could not be loaded.",fitLogo:"Fit to band",pInvert:"Invert",pBrush:"Brush",fitBand:"Fit to band",center:"Center",dup:"Duplicate",del:"Delete",front:"To front",
   brOff:"Off",brLines:"Lines top + bottom",brUnder:"Underline",brDiag:"Diagonal hatching",partRing:"TPU text ring (for hub)",partOne:"One-piece roll (608 seat)",partHub:"PETG hub only",
   wOk:"Everything looks good – ready to print.",wThin:"{n} thin spots marked red. Make the element bigger or bolder.",wGap:"{n} gap(s) marked yellow: the felt tip drops in there. Close the gap or turn on bridges.",
   wOut:"Parts of the design lie outside the printable band (purple) and will be cut off.",wEmpty:"The ring is empty – add text or a symbol.",
@@ -231,7 +232,7 @@ const I18N = {
   footer:"Gemacht für den Stamproller Marker-Rollstempel.",
   noSel:"Klick ein Element auf dem Ring an, um es zu bearbeiten – oder füge mit den Werkzeugen links Text, ein Symbol oder dein Logo hinzu.",
   pText:"Text",pFont:"Schrift",pSize:"Höhe",pWidth:"Breite",pSpacing:"Abstand",pBold:"Fett",pItalic:"Kursiv",pRepeat:"Wiederholung",pSep:"Trenner",pSepSize:"Trenner-Größe",pRot:"Drehen",
-  pShape:"Symbol",pOutline:"Kontur",pThr:"Schwelle",pInvert:"Umkehren",pBrush:"Pinsel",fitBand:"Bandhöhe",center:"Mittig",dup:"Kopieren",del:"Löschen",front:"Nach vorn",
+  pShape:"Symbol",pOutline:"Kontur",pThr:"Schwelle",pMode:"Verwenden",modeAuto:"Automatisch",modeDark:"Dunkle Teile",modeLight:"Helle Teile",modeAlpha:"Nicht transparente Teile",pSmooth:"Kanten glätten",pBold:"Fetter",logoHint:"Eigenes Logo: PNG, JPG oder SVG. Am besten schwarzes Logo auf weißem oder transparentem Hintergrund, hoher Kontrast. Hineinziehen oder einfügen (Strg+V) geht auch. Lade nur Logos hoch, die du verwenden darfst.",logoErr:"Dieses Bild konnte nicht geladen werden.",fitLogo:"Bandhöhe",pInvert:"Umkehren",pBrush:"Pinsel",fitBand:"Bandhöhe",center:"Mittig",dup:"Kopieren",del:"Löschen",front:"Nach vorn",
   brOff:"Aus",brLines:"Linien oben + unten",brUnder:"Unterstrich",brDiag:"Diagonale Striche",partRing:"TPU-Textring (für Nabe)",partOne:"Rolle einteilig (608-Sitz)",partHub:"Nur PETG-Nabe",
   wOk:"Alles sieht gut aus – bereit zum Drucken.",wThin:"{n} dünne Stellen rot markiert. Element größer oder fetter machen.",wGap:"{n} Lücke(n) gelb markiert: Dort fällt die Filzspitze hinein. Lücke schließen oder Brücken einschalten.",
   wOut:"Teile des Designs liegen außerhalb des druckbaren Bands (lila) und werden abgeschnitten.",wEmpty:"Der Ring ist leer – füge Text oder ein Symbol hinzu.",
@@ -320,19 +321,51 @@ let _mc; function measCtx(){ return _mc || (_mc = document.createElement("canvas
 function prepImage(o){
   const img = new Image();
   img.onload = () => {
-    const maxW = 600, sc = Math.min(1, maxW / img.width), w = Math.max(1, Math.round(img.width*sc)), h = Math.max(1, Math.round(img.height*sc));
+    let iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+    if (!iw || !ih){ iw = 1200; ih = 1200; }                       // SVG ohne Groessenangabe
+    const maxW = 1600, sc = Math.min(maxW / iw, maxW / ih, /svg/i.test(o.src.slice(0,40)) ? 8 : 1);
+    const w = Math.max(1, Math.round(iw*sc)), h = Math.max(1, Math.round(ih*sc));
     o.aspect = w / h; const cv = document.createElement("canvas"); cv.width = w; cv.height = h; const c = cv.getContext("2d");
-    c.fillStyle = "#fff"; c.fillRect(0,0,w,h); c.drawImage(img, 0, 0, w, h);
-    o._src = c.getImageData(0,0,w,h); o._cv = cv; o._dirty = true; buildImageMask(o); changed(false);
+    c.clearRect(0,0,w,h); c.drawImage(img, 0, 0, w, h);
+    o._src = c.getImageData(0,0,w,h); o._cv = cv;
+    let tr = 0, op = 0, lum = 0; const d = o._src.data;
+    for (let i=0;i<d.length;i+=16){ if (d[i+3] < 200) tr++; else { op++; lum += 0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]; } }
+    // helles Logo auf transparentem Grund (z. B. weisses Logo) -> deckende Teile verwenden, sonst dunkle Teile
+    o._lightOnClear = tr > d.length/16*0.05 && op > 0 && lum/op > 200;
+    buildImageMask(o); changed(true);
   };
+  img.onerror = () => { alert(t("logoErr")); };
   img.src = o.src;
 }
 function buildImageMask(o){
-  if (!o._src) return; const d = o._src.data, w = o._src.width, h = o._src.height, out = o._cv.getContext("2d").createImageData(w, h);
-  const thr = o.thr/100*255;
-  for (let i=0;i<w*h;i++){ const L = 0.299*d[4*i]+0.587*d[4*i+1]+0.114*d[4*i+2]; let on = L < thr; if (o.invert) on = !on;
-    out.data[4*i]=0; out.data[4*i+1]=0; out.data[4*i+2]=0; out.data[4*i+3]= on?255:0; }
-  const m = document.createElement("canvas"); m.width = w; m.height = h; m.getContext("2d").putImageData(out,0,0); o._mask = m; o._thr = o.thr; o._inv = o.invert;
+  if (!o._src) return; const d = o._src.data, w = o._src.width, h = o._src.height;
+  const mode = (o.mode && o.mode !== "auto") ? o.mode : (o._lightOnClear ? "alpha" : "dark");
+  const thr = o.thr/100*255, soft = 14;
+  let v = new Float32Array(w*h);
+  for (let i=0;i<w*h;i++){
+    const a = d[4*i+3]/255, lum = 0.299*d[4*i]+0.587*d[4*i+1]+0.114*d[4*i+2];
+    let x;
+    if (mode === "alpha") x = (a*255 - thr)/soft;
+    else if (mode === "light") x = (lum*a - thr)/soft;               // auf Schwarz
+    else x = (thr - (lum*a + 255*(1-a)))/soft;                      // auf Weiss, dunkle Teile
+    let on = Math.min(1, Math.max(0, 0.5 + x/2)); if (o.invert) on = 1 - on; v[i] = on;
+  }
+  // Glaetten: kleiner Kastenfilter (entfernt Pixeltreppen/Flecken)
+  const sm = Math.round((o.smooth||0) * w / 600);
+  if (sm > 0){ v = boxBlur(v, w, h, sm); for (let i=0;i<v.length;i++) v[i] = Math.min(1, Math.max(0, (v[i]-0.5)*3 + 0.5)); }
+  const out = o._cv.getContext("2d").createImageData(w, h);
+  for (let i=0;i<w*h;i++){ out.data[4*i+3] = Math.round(v[i]*255); }
+  const m = document.createElement("canvas"); m.width = w; m.height = h; m.getContext("2d").putImageData(out,0,0);
+  o._mask = m; o._thr = o.thr; o._inv = o.invert; o._key = imgKey(o);
+}
+const imgKey = o => [o.thr, o.invert, o.mode, o.smooth].join("|");
+function boxBlur(v, w, h, r){
+  const t = new Float32Array(v.length), o = new Float32Array(v.length), n = 2*r+1;
+  for (let y=0;y<h;y++){ let s=0; for (let x=-r;x<=r;x++) s += v[y*w+Math.min(w-1,Math.max(0,x))];
+    for (let x=0;x<w;x++){ t[y*w+x] = s/n; s += v[y*w+Math.min(w-1,x+r+1)] - v[y*w+Math.max(0,x-r)]; } }
+  for (let x=0;x<w;x++){ let s=0; for (let y=-r;y<=r;y++) s += t[Math.min(h-1,Math.max(0,y))*w+x];
+    for (let y=0;y<h;y++){ o[y*w+x] = s/n; s += t[Math.min(h-1,y+r+1)*w+x] - t[Math.max(0,y-r)*w+x]; } }
+  return o;
 }
 
 // ---------------- Motiv zeichnen (Papieransicht, mm-Koordinaten) ----------------
@@ -346,7 +379,7 @@ function drawObjectAt(ctx, o, x){
     if (o.bold > 0){ ctx.lineWidth = 2*o.bold/(o.sx/100); ctx.lineJoin = "round"; ctx.strokeText(o.text, 0, off); }
     ctx.fillText(o.text, 0, off);
   } else if (o.type === "shape"){ fillShape(ctx, o.shape, o.w, o.h, o.outline); }
-  else if (o.type === "image" && o._mask){ if (o._thr !== o.thr || o._inv !== o.invert) buildImageMask(o); const h = o.h, w = h*o.aspect; ctx.drawImage(o._mask, -w/2, -h/2, w, h); }
+  else if (o.type === "image" && o._mask){ if (o._key !== imgKey(o)) buildImageMask(o); const h = o.h, w = h*o.aspect, b = o.bold||0; if (b > 0) for (let k=0;k<16;k++){ const a=k*Math.PI/8; ctx.drawImage(o._mask, -w/2+Math.cos(a)*b, -h/2+Math.sin(a)*b, w, h); } ctx.drawImage(o._mask, -w/2, -h/2, w, h); }
   ctx.restore();
 }
 function drawObject(ctx, o){
@@ -767,7 +800,7 @@ function changed(heavy){
   save();
 }
 function save(){ try { localStorage.setItem("stamproller-design", serialize()); } catch(e){} }
-function serialize(){ return JSON.stringify({v:1, S: {...S, objects: S.objects.map(o => { const c = {...o}; delete c._src; delete c._cv; delete c._mask; delete c._thr; delete c._inv; delete c._dirty; return c; })}}); }
+function serialize(){ return JSON.stringify({v:1, S: {...S, objects: S.objects.map(o => Object.fromEntries(Object.entries(o).filter(([k]) => !k.startsWith("_"))))}}); }
 function loadState(json){ const d = JSON.parse(json); if (!d || !d.S) return false; Object.assign(S, d.S); uid = 1 + Math.max(0, ...S.objects.map(o=>o.id||0)); S.objects.forEach(o => { if (o.type==="image") prepImage(o); }); sel = null; return true; }
 
 // ---------- Interaktion ----------
@@ -869,8 +902,12 @@ function buildProps(){
   }
   if (o.type === "image"){
     box.append(row(t("pSize"), ...rng("pH", 1, 15, 0.1, o.h, mm, v => o.h = v)));
+    box.append(row(t("pMode"), sel_("pMode", [["auto",t("modeAuto")],["dark",t("modeDark")],["light",t("modeLight")],["alpha",t("modeAlpha")]], o.mode||"auto", v => o.mode = v)));
     box.append(row(t("pThr"), ...rng("pThr", 5, 95, 1, o.thr, v => v+" %", v => o.thr = v)));
+    box.append(row(t("pSmooth"), ...rng("pSmooth", 0, 4, 1, o.smooth||0, v => v ? v+"" : "–", v => o.smooth = v)));
+    box.append(row(t("pBold"), ...rng("pBold", 0, 0.6, 0.05, o.bold||0, mm, v => o.bold = v)));
     box.append(row(t("pInvert"), chk("pInvert", o.invert, v => o.invert = v)));
+    const hint = document.createElement("p"); hint.className = "hint"; hint.textContent = t("logoHint"); box.append(hint);
     box.append(row(t("pRepeat"), ...rng("pRepeat", 1, 10, 1, o.repeat, v => v+"×", v => o.repeat = v)));
   }
   if (o.type === "stroke"){ box.append(row(t("pBrush"), ...rng("pBrushO", 0.4, 6, 0.1, o.width, mm, v => o.width = v))); }
@@ -878,6 +915,7 @@ function buildProps(){
   const acts = document.createElement("div"); acts.className = "presets";
   const mk = (key, fn) => { const b = document.createElement("button"); b.className = "btn small"; b.textContent = t(key); b.addEventListener("click", () => { snapshot(); fn(); changed(true); buildProps(); buildLayers(); }); acts.append(b); };
   if (o.type === "text") mk("fitBand", () => fitText(o));
+  if (o.type === "image") mk("fitLogo", () => { o.h = +(bandH()-0.4).toFixed(2); o.y = 0; });
   if (o.type !== "stroke") mk("center", () => { o.y = 0; });
   mk("dup", () => { const c = JSON.parse(JSON.stringify(o, (k,v) => k.startsWith("_") ? undefined : v)); c.id = uid++; if (c.x !== undefined) c.x = (c.x + C()/4) % C(); S.objects.push(c); if (c.type==="image") prepImage(c); sel = c; });
   mk("front", () => { S.objects = S.objects.filter(x => x !== o); S.objects.push(o); });
@@ -908,9 +946,20 @@ document.querySelectorAll(".tool[data-tool]").forEach(b => b.addEventListener("c
 $("tText").addEventListener("click", () => { snapshot(); const o = newText(LANG==="de" ? "Dein Text" : "Your text", C()/2); S.objects.push(o); fitText(o); sel = o; setTool("select"); changed(true); buildLayers(); buildProps(); setTimeout(()=>{ const i=$("pText"); if (i){ i.focus(); i.select(); } }, 30); });
 $("tShape").addEventListener("click", () => { snapshot(); const o = newShape("star", C()/4); S.objects.push(o); sel = o; setTool("select"); changed(true); buildLayers(); buildProps(); });
 $("tImage").addEventListener("click", () => $("fileImg").click());
-$("fileImg").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader();
-  rd.onload = () => { snapshot(); const o = {id:uid++, type:"image", src: rd.result, thr:50, invert:false, h: bandH()-0.5, aspect:1, x:C()/2, y:0, rot:0, repeat:1}; S.objects.push(o); prepImage(o); sel = o; setTool("select"); buildLayers(); buildProps(); changed(true); };
-  rd.readAsDataURL(f); e.target.value = ""; });
+function addLogoFile(f){
+  if (!f || !/^image\/(png|jpeg|svg\+xml|webp|gif)$/.test(f.type)) return false;
+  const rd = new FileReader();
+  rd.onload = () => { snapshot(); const o = {id:uid++, type:"image", src: rd.result, thr:50, invert:false, mode:"auto", smooth:1, bold:0, h: +(bandH()-0.4).toFixed(2), aspect:1, x:C()/2, y:0, rot:0, repeat:1};
+    S.objects.push(o); prepImage(o); sel = o; setTool("select"); buildLayers(); buildProps(); changed(true); };
+  rd.readAsDataURL(f); return true;
+}
+$("fileImg").addEventListener("change", e => { addLogoFile(e.target.files[0]); e.target.value = ""; });
+(() => { const zone = $("stage").parentElement;
+  ["dragenter","dragover"].forEach(ev => zone.addEventListener(ev, e => { if ([...(e.dataTransfer?.items||[])].some(it => it.kind === "file")){ e.preventDefault(); zone.classList.add("drop"); } }));
+  ["dragleave","drop"].forEach(ev => zone.addEventListener(ev, () => zone.classList.remove("drop")));
+  zone.addEventListener("drop", e => { e.preventDefault(); const f = [...(e.dataTransfer?.files||[])].find(f => f.type.startsWith("image/")); addLogoFile(f); });
+  document.addEventListener("paste", e => { if (/input|textarea/i.test(document.activeElement?.tagName||"")) return; const it = [...(e.clipboardData?.items||[])].find(i => i.type.startsWith("image/")); if (it){ e.preventDefault(); addLogoFile(it.getAsFile()); } });
+})();
 $("undo").addEventListener("click", undo);
 $("zoom").addEventListener("input", () => { layoutStage(); renderStage(); });
 $("showWarn").addEventListener("change", () => { maskToImage(); renderStage(); });
