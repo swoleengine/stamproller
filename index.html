@@ -377,6 +377,7 @@ function buildMask(){
   c.setTransform(PPM,0,0,PPM,0,0); c.fillStyle = "#000"; c.strokeStyle = "#000";
   for (const o of S.objects) drawObject(c, o);
   const A = c.getImageData(0,0,nx,ny).data;
+  const RF = new Float32Array(nx*ny);   // geglaettete Hoehe 0..1 (Kantenglaettung fuer die STL)
   const R = new Uint8Array(nx*ny), Mo = new Uint8Array(nx*ny), Out = new Uint8Array(nx*ny), Br = new Uint8Array(nx*ny);
   const e0 = Math.round(edge()*PPM), e1 = ny - e0;
   // Bruecken
@@ -395,8 +396,12 @@ function buildMask(){
       let r = neg ? !mm : mm;
       if (S.bridges !== "off" && inBridge(x,y)){ if (S.bridgeLow) Br[k] = 1; else r = true; }
       R[k] = r ? 1 : 0;
+      const al = inside ? A[4*k+3]/255 : 0;
+      let rf = neg ? (inside ? 1 - al : 1) : al;
+      if (S.bridges !== "off" && !S.bridgeLow && inBridge(x,y)) rf = 1;
+      RF[k] = rf;
     } }
-  MASK = {R, Mo, Out, Br, nx, ny};
+  MASK = {R, RF, Mo, Out, Br, nx, ny};
   return MASK;
 }
 
@@ -455,7 +460,7 @@ function renderWarnings(){
 //  Masse passend zur Stamproller-Nabe (Lager 608) und zum OpenSCAD-Designer
 // =====================================================================
 const BRG_OD = 22.0, BRG_FIT = 0.10, BRG_W = 7.0, LIP_D = 17.0, HUB_WALL = 1.6, RING_T_MIN = 2.5, RING_SQUEEZE = 0.3,
-      HUB_KEYS = 6, KEY_R = 0.7, NOTCH_RAD = 0.85, NOTCH_TAN = 1.3, WALL_MIN = 1.0, SLOPE_START = 0.8, SLOPE_STEP = 0.4, BRIDGE_DROP = 0.5;
+      HUB_KEYS = 6, KEY_R = 0.7, NOTCH_RAD = 0.85, NOTCH_TAN = 1.3, WALL_MIN = 1.0, SLOPE_START = 0, SLOPE_STEP = 0.4, BRIDGE_DROP = 0.5;
 const rOut = () => C() / (2*Math.PI);
 const hubR = () => Math.max((BRG_OD + BRG_FIT)/2 + HUB_WALL, rOut() - 1.5 - RING_T_MIN);   // fest -> passt auf vorhandene Naben
 const reliefEff = () => Math.min(S.relief, rOut() - (hubR() + NOTCH_RAD + WALL_MIN));
@@ -483,9 +488,12 @@ function sampleGrid(src, res){
 }
 // Material nach unten (-v, Druckrichtung) um g mm verbreitern -> 45-Grad-Auslauf unter Kanten
 function growDown(g, mm){
-  const {s, N, M, dv} = g, out = new Float32Array(s.length), lim = mm/dv;
-  for (let i=0;i<N;i++){ let last = -1e9;
-    for (let j=M;j>=0;j--){ const k=j*N+i; if (s[k] >= 0.5) last = j; out[k] = (s[k] >= 0.5 || (last - j) <= lim) ? 1 : 0; } }
+  // Material bei Hoehe j' bedeckt [j'-lim, j'] -> out(j) = max s(j..j+lim), letzte Zeile anteilig (glatte Kanten)
+  const {s, N, M, dv} = g, out = new Float32Array(s.length), lim = mm/dv, L = Math.floor(lim), fr = lim - L;
+  for (let i=0;i<N;i++) for (let j=0;j<=M;j++){
+    let m = 0; for (let t=0; t<=L && j+t<=M; t++){ const v = s[(j+t)*N+i]; if (v > m) m = v; }
+    if (fr > 0 && j+L+1 <= M){ const nb = s[(j+L+1)*N+i], prev = s[(j+L)*N+i]; const v = prev + (nb - prev)*fr; if (v > m) m = v; }
+    out[j*N+i] = m; }
   return {...g, s: out};
 }
 
@@ -558,7 +566,7 @@ function simpleInner(mb, r){ const a = polarRing(mb, () => r, 360, 0), b = polar
 function buildRoller(res, opts){
   opts = opts || {};
   const Ro = rOut(), re = reliefEff(), Rb = Ro - re, mb = new MeshB();
-  const g = sampleGrid(MASK.R, res);
+  const g = sampleGrid(MASK.RF || MASK.R, res);
   const s0 = S.slopes ? Math.min(SLOPE_START, re) : re, nsl = S.slopes ? Math.max(1, Math.ceil((re - s0)/SLOPE_STEP)) : 1, st = S.slopes ? (re - s0)/nsl : 0;
   closeShell(mb, buildTop(mb, g, Ro, Rb), innerBore(mb, S.part));
   if (S.slopes && !opts.preview) for (let j=1;j<nsl;j++){
